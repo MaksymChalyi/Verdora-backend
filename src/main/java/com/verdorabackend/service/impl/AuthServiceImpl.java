@@ -6,6 +6,8 @@ import com.verdorabackend.dto.request.SignUpRequest;
 import com.verdorabackend.dto.response.SignupResponse;
 import com.verdorabackend.entity.Role;
 import com.verdorabackend.entity.User;
+import com.verdorabackend.exception.InvalidCredentialsException;
+import com.verdorabackend.exception.UserAlreadyExistsException;
 import com.verdorabackend.mapper.UserMapper;
 import com.verdorabackend.repository.UserRepository;
 import com.verdorabackend.security.JwtService;
@@ -36,7 +38,7 @@ public class AuthServiceImpl implements AuthService {
         log.debug("Attempting to sign up user with email: {}", request.email());
         if (userRepository.existsByEmail(request.email())) {
             log.warn("Signup failed: email already exists, email={}", request.email());
-            throw new RuntimeException("Email already exists.");
+            throw new UserAlreadyExistsException();
         }
         User user = userMapper.toEntity(request);
         user.setPasswordHash(passwordEncoder.encode(request.password()));
@@ -62,7 +64,7 @@ public class AuthServiceImpl implements AuthService {
                 )
         );
         User user = userRepository.findUserByEmail(request.email())
-                .orElseThrow(() -> new RuntimeException("User not found."));
+                .orElseThrow(InvalidCredentialsException::new);
         String token = jwtService.generateAccessToken(new UserPrincipal(user));
         log.info("User logged in: userId={}, email={}", user.getId(), user.getEmail());
         return new AuthResult(user.getEmail(), token);

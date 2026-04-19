@@ -1,4 +1,4 @@
-package com.verdorabackend.dto.response.general;
+package com.verdorabackend.dto.response;
 
 import java.time.OffsetDateTime;
 
