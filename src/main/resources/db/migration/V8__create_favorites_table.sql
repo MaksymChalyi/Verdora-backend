@@ -4,10 +4,10 @@
 CREATE TABLE favorites
 (
     -- Користувач
-    user_id    INT                      NOT NULL,
+    user_id    BIGINT                      NOT NULL,
 
     -- Товар
-    product_id INT                      NOT NULL,
+    product_id BIGINT                      NOT NULL,
 
     -- Дата додавання в обране
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,

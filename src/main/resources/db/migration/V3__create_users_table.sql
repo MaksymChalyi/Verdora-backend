@@ -5,7 +5,7 @@ CREATE TABLE users
 (
     -- Унікальний ідентифікатор
     -- Генерується автоматично PostgreSQL
-    user_id       INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    user_id       BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
 
     -- Ім'я користувача
     name          VARCHAR(256)             NOT NULL,
@@ -30,9 +30,9 @@ CREATE TABLE users
 
     -- Дата створення
     -- Автоматично виставляється при INSERT
-    created_at    TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at    TIMESTAMP WITH TIME ZONE NOT NULL,
 
     -- Дата останнього оновлення
-    -- Має оновлюватись при UPDATE (через код або тригер)
-    updated_at    TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+    -- Має оновлюватись при UPDATE (через код)
+    updated_at    TIMESTAMP WITH TIME ZONE NOT NULL
 );

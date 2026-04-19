@@ -4,13 +4,13 @@
 CREATE TABLE order_items
 (
     -- Унікальний ідентифікатор
-    order_item_id     INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    order_item_id     BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
 
     -- Посилання на замовлення
-    order_id          INT            NOT NULL,
+    order_id          BIGINT            NOT NULL,
 
     -- Посилання на товар
-    product_id        INT            NOT NULL,
+    product_id        BIGINT            NOT NULL,
 
     -- Кількість товару
     quantity          INT            NOT NULL CHECK (quantity > 0),

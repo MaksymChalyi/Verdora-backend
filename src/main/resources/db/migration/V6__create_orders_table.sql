@@ -4,17 +4,17 @@
 CREATE TABLE cart_items
 (
     -- Унікальний ідентифікатор
-    cart_item_id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    cart_item_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
 
     -- Посилання на кошик
-    cart_id      INT NOT NULL,
+    cart_id      BIGINT NOT NULL,
 
     -- Посилання на товар
-    product_id   INT NOT NULL,
+    product_id   BIGINT NOT NULL,
 
     -- Кількість товару
     -- Не може бути 0 або від’ємною
-    quantity     INT NOT NULL CHECK (quantity > 0),
+    quantity     BIGINT NOT NULL CHECK (quantity > 0),
 
     -- Забороняє дублікати одного товару в одному кошику
     CONSTRAINT uq_cart_product UNIQUE (cart_id, product_id),

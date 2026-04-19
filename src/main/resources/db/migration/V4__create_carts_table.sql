@@ -4,7 +4,7 @@
 CREATE TABLE carts
 (
     -- Унікальний ідентифікатор кошика
-    cart_id    INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    cart_id    BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
 
     -- Посилання на користувача
     -- UNIQUE гарантує, що у користувача тільки один кошик

@@ -1,3 +1,15 @@
 spring:
   application:
     name: Verdora-backend
+  datasource:
+    driver-class-name: ${DB_DRIVER}
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+
+server:
+  port: 8081
+
+jwt:
+  secret: my-super-secret-key-my-super-secret-key-123456
+  expiration: 3600000

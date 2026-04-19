@@ -4,7 +4,7 @@
 CREATE TABLE products
 (
     -- Автоінкрементний первинний ключ
-    product_id     INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    product_id     BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
 
     -- Назва товару
     -- Обов'язкове поле

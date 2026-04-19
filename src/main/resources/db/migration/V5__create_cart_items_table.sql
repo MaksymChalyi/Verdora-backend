@@ -4,7 +4,7 @@
 CREATE TABLE orders
 (
     -- Унікальний ідентифікатор
-    order_id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    order_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
 
     -- Користувач, який зробив замовлення
     user_id INT NOT NULL,
