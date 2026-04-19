@@ -1,16 +1,18 @@
 package com.verdorabackend.controller;
 
+import com.verdorabackend.dto.auth.AuthResult;
 import com.verdorabackend.dto.request.SignInRequest;
 import com.verdorabackend.dto.request.SignUpRequest;
-import com.verdorabackend.dto.response.general.ApiResponse;
-import com.verdorabackend.dto.response.general.ApiResponseFactory;
 import com.verdorabackend.dto.response.SignInResponse;
 import com.verdorabackend.dto.response.SignupResponse;
+import com.verdorabackend.dto.response.general.ApiResponse;
+import com.verdorabackend.dto.response.general.ApiResponseFactory;
+import com.verdorabackend.security.CookieService;
 import com.verdorabackend.service.AuthService;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -20,12 +22,12 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequiredArgsConstructor
-@Slf4j
 @Tag(name = "Authentication", description = "Endpoints for authentication")
 @RequestMapping("/auth")
 public class AuthController {
 
     private final AuthService authService;
+    private final CookieService cookieService;
 
     @PostMapping("/register")
     public ResponseEntity<ApiResponse<SignupResponse>> signup(@Valid @RequestBody SignUpRequest request) {
@@ -40,13 +42,14 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<ApiResponse<SignInResponse>> login(@RequestBody SignInRequest request) {
-        SignInResponse response = authService.login(request);
+    public ResponseEntity<ApiResponse<SignInResponse>> login(@RequestBody SignInRequest request, HttpServletResponse response) {
+        AuthResult result = authService.login(request);
+        cookieService.addAccessToken(response, result.token());
         return ResponseEntity.ok(
                 ApiResponseFactory.success(
                         HttpStatus.OK,
                         "Login successful",
-                        response
+                        new SignInResponse(result.email())
                 )
         );
     }

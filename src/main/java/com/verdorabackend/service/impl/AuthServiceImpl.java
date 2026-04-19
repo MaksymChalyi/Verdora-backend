@@ -1,8 +1,8 @@
 package com.verdorabackend.service.impl;
 
+import com.verdorabackend.dto.auth.AuthResult;
 import com.verdorabackend.dto.request.SignInRequest;
 import com.verdorabackend.dto.request.SignUpRequest;
-import com.verdorabackend.dto.response.SignInResponse;
 import com.verdorabackend.dto.response.SignupResponse;
 import com.verdorabackend.entity.Role;
 import com.verdorabackend.entity.User;
@@ -48,7 +48,7 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    public SignInResponse login(SignInRequest request) {
+    public AuthResult login(SignInRequest request) {
 
         // Authenticate user using Spring Security:
         // - delegates to AuthenticationManager
@@ -65,7 +65,7 @@ public class AuthServiceImpl implements AuthService {
                 .orElseThrow(() -> new RuntimeException("User not found."));
         String token = jwtService.generateAccessToken(new UserPrincipal(user));
         log.info("User logged in: userId={}, email={}", user.getId(), user.getEmail());
-        return new SignInResponse(user.getEmail(), token);
+        return new AuthResult(user.getEmail(), token);
     }
 
 }
