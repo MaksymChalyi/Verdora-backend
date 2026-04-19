@@ -1,8 +1,10 @@
 package com.verdorabackend.controller;
 
+import com.verdorabackend.dto.request.SignInRequest;
 import com.verdorabackend.dto.request.SignUpRequest;
 import com.verdorabackend.dto.response.ApiResponse;
 import com.verdorabackend.dto.response.ApiResponseFactory;
+import com.verdorabackend.dto.response.SignInResponse;
 import com.verdorabackend.dto.response.SignupResponse;
 import com.verdorabackend.service.AuthService;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -37,7 +39,16 @@ public class AuthController {
         );
     }
 
-
-
+    @PostMapping("/login")
+    public ResponseEntity<ApiResponse<SignInResponse>> login(@RequestBody SignInRequest request) {
+        SignInResponse response = authService.login(request);
+        return ResponseEntity.ok(
+                ApiResponseFactory.success(
+                        HttpStatus.OK,
+                        "Login successful",
+                        response
+                )
+        );
+    }
 
 }
