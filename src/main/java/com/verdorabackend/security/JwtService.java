@@ -4,7 +4,6 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
@@ -18,6 +17,20 @@ import java.util.function.Function;
 public class JwtService {
 
     private final JwtProperties jwtProperties;
+
+    public boolean isRefreshToken(String token) {
+        return "refresh".equals(extractTokenType(token));
+    }
+
+    public String generateRefreshToken(UserDetails userDetails) {
+        return Jwts.builder()
+                .setSubject(userDetails.getUsername())
+                .claim("type", "refresh")
+                .setIssuedAt(new Date())
+                .setExpiration(new Date(System.currentTimeMillis() + jwtProperties.getRefreshExpiration()))
+                .signWith(getSecretKey())
+                .compact();
+    }
 
     public boolean isTokenValid(String token, UserDetails userDetails) {
         String username = extractUsername(token);
@@ -61,7 +74,7 @@ public class JwtService {
                 .setSubject(userDetails.getUsername())
                 .claim("type", "access")
                 .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + jwtProperties.getExpiration()))
+                .setExpiration(new Date(System.currentTimeMillis() + jwtProperties.getAccessExpiration()))
                 .signWith(getSecretKey())
                 .compact();
     }

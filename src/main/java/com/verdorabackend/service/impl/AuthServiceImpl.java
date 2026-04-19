@@ -65,9 +65,10 @@ public class AuthServiceImpl implements AuthService {
         );
         User user = userRepository.findUserByEmail(request.email())
                 .orElseThrow(InvalidCredentialsException::new);
-        String token = jwtService.generateAccessToken(new UserPrincipal(user));
+        String accessToken = jwtService.generateAccessToken(new UserPrincipal(user));
+        String refreshToken = jwtService.generateRefreshToken(new UserPrincipal(user));
         log.info("User logged in: userId={}, email={}", user.getId(), user.getEmail());
-        return new AuthResult(user.getEmail(), token);
+        return new AuthResult(user.getEmail(), accessToken, refreshToken);
     }
 
 }

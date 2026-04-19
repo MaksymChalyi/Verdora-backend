@@ -3,10 +3,10 @@ package com.verdorabackend.controller;
 import com.verdorabackend.dto.auth.AuthResult;
 import com.verdorabackend.dto.request.SignInRequest;
 import com.verdorabackend.dto.request.SignUpRequest;
-import com.verdorabackend.dto.response.SignInResponse;
-import com.verdorabackend.dto.response.SignupResponse;
 import com.verdorabackend.dto.response.ApiResponse;
 import com.verdorabackend.dto.response.ApiResponseFactory;
+import com.verdorabackend.dto.response.SignInResponse;
+import com.verdorabackend.dto.response.SignupResponse;
 import com.verdorabackend.security.CookieService;
 import com.verdorabackend.service.AuthService;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -44,7 +44,8 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<SignInResponse>> login(@RequestBody SignInRequest request, HttpServletResponse response) {
         AuthResult result = authService.login(request);
-        cookieService.addAccessToken(response, result.token());
+        cookieService.addAccessToken(response, result.accessToken());
+        cookieService.addRefreshToken(response, result.refreshToken());
         return ResponseEntity.ok(
                 ApiResponseFactory.success(
                         HttpStatus.OK,
