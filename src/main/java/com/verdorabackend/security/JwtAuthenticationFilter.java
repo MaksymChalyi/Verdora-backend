@@ -2,6 +2,7 @@ package com.verdorabackend.security;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.NonNull;
@@ -47,5 +48,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
         filterChain.doFilter(request, response);
     }
+
+//    private String extractTokenFromCookies(HttpServletRequest request) {
+//        if (request.getCookies() == null) return null;
+//
+//        for (Cookie cookie : request.getCookies()) {
+//            if ("accessToken".equals(cookie.getName())) {
+//                return cookie.getValue();
+//            }
+//        }
+//        return null;
+//    }
 
 }

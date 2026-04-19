@@ -1,4 +1,4 @@
-package com.verdorabackend.dto.response;
+package com.verdorabackend.dto.response.general;
 
 import org.springframework.http.HttpStatus;
 

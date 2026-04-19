@@ -2,8 +2,8 @@ package com.verdorabackend.controller;
 
 import com.verdorabackend.dto.request.SignInRequest;
 import com.verdorabackend.dto.request.SignUpRequest;
-import com.verdorabackend.dto.response.ApiResponse;
-import com.verdorabackend.dto.response.ApiResponseFactory;
+import com.verdorabackend.dto.response.general.ApiResponse;
+import com.verdorabackend.dto.response.general.ApiResponseFactory;
 import com.verdorabackend.dto.response.SignInResponse;
 import com.verdorabackend.dto.response.SignupResponse;
 import com.verdorabackend.service.AuthService;
