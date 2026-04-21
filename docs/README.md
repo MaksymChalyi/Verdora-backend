@@ -129,18 +129,87 @@ Centralized via:
 
 ---
 
-## 10. Project Structure
+## 10. Run Application
+
+### 10.1 Prerequisites
+
+- Java 21
+- Maven
+- PostgreSQL
+
+---
+
+### 10.2 Database Setup
+
+Create database:
+
+CREATE DATABASE verdora;
+
+---
+
+### 10.3 Configuration
+
+Configure datasource in application.yml:
+
+spring:
+datasource:
+url: jdbc:postgresql://localhost:5432/verdora
+username: postgres
+password: postgres
+
+jpa:
+hibernate:
+ddl-auto: validate
+
+flyway:
+enabled: true
+
+---
+
+### 10.4 Run Application
+
+mvn clean install  
+mvn spring-boot:run
+
+or
+
+./mvnw spring-boot:run
+
+---
+
+### 10.5 Access
+
+- API: http://localhost:8081
+- Swagger UI: http://localhost:8081/swagger-ui/index.html
+
+---
+
+### 10.6 Health Check
+
+GET /health/ping
+
+Expected:
 ```
+{
+"status": 200,
+"message": "Service is alive",
+"data": "pong"
+}
+```
+---
+
+## 11. Project Structure
+
 controller/
 service/
 repository/
 dto/
 exception/
 security/
-```
+
 ---
 
-## 11. Future Improvements
+## 12. Future Improvements
 
 - Add DTO for current user (id, role)
 - Replace Principal with custom UserDetails
@@ -150,7 +219,7 @@ security/
 
 ---
 
-## 12. Notes
+## 13. Notes
 
 - Uses cookies instead of Bearer tokens
 - All responses wrapped in BaseResponse
