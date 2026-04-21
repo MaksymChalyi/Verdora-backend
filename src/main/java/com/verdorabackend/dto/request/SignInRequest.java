@@ -4,9 +4,10 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 
+@Schema(description = "Login request payload")
 public record SignInRequest(
 
-        @Schema(description = "email", example = "user@gmail.com")
+        @Schema(description = "User email", example = "user@gmail.com")
         @Email
         @NotBlank
         String email,

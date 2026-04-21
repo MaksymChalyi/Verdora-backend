@@ -1,15 +1,16 @@
 package com.verdorabackend.config.openapi;
 
-import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
-import io.swagger.v3.oas.annotations.security.SecurityScheme;
+import io.swagger.v3.oas.annotations.OpenAPIDefinition;
+import io.swagger.v3.oas.annotations.info.Info;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
-@SecurityScheme(
-        name = "Bearer Authentication",
-        type = SecuritySchemeType.HTTP,
-        bearerFormat = "JWT",
-        scheme = "bearer"
+@OpenAPIDefinition(
+        info = @Info(
+                title = "Verdora API",
+                version = "1.0",
+                description = "Authentication and user management API with JWT cookie-based authentication"
+        )
 )
 public class OpenAPI30Configuration {
 }

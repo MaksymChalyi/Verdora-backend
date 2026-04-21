@@ -4,10 +4,10 @@ import org.springframework.http.HttpStatus;
 
 import java.time.OffsetDateTime;
 
-public class ApiResponseFactory {
+public class BaseResponseFactory {
 
-    public static <T> ApiResponse<T> success(HttpStatus status, String message, T data) {
-        return new ApiResponse<>(
+    public static <T> BaseResponse<T> success(HttpStatus status, String message, T data) {
+        return new BaseResponse<>(
                 OffsetDateTime.now(),
                 status.value(),
                 message,
@@ -15,8 +15,8 @@ public class ApiResponseFactory {
         );
     }
 
-    public static ApiResponse<Void> success(HttpStatus status, String message) {
-        return new ApiResponse<>(
+    public static BaseResponse<Void> success(HttpStatus status, String message) {
+        return new BaseResponse<>(
                 OffsetDateTime.now(),
                 status.value(),
                 message,
@@ -24,8 +24,8 @@ public class ApiResponseFactory {
         );
     }
 
-    public static ApiResponse<Void> error(HttpStatus status, String message) {
-        return new ApiResponse<>(
+    public static BaseResponse<Void> error(HttpStatus status, String message) {
+        return new BaseResponse<>(
                 OffsetDateTime.now(),
                 status.value(),
                 message,

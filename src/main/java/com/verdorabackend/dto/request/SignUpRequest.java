@@ -3,6 +3,7 @@ package com.verdorabackend.dto.request;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Size;
 
+@Schema(description = "Registration request payload")
 public record SignUpRequest(
 
         @Schema(description = "name", example = "Stepan")
