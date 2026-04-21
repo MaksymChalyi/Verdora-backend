@@ -150,7 +150,7 @@ CREATE DATABASE verdora;
 ### 10.3 Configuration
 
 Configure datasource in application.yml:
-
+```
 spring:
 datasource:
 url: jdbc:postgresql://localhost:5432/verdora
@@ -163,18 +163,20 @@ ddl-auto: validate
 
 flyway:
 enabled: true
-
+```
 ---
 
 ### 10.4 Run Application
-
+```
 mvn clean install  
+```
+```
 mvn spring-boot:run
-
+```
 or
-
+```
 ./mvnw spring-boot:run
-
+```
 ---
 
 ### 10.5 Access
@@ -199,14 +201,14 @@ Expected:
 ---
 
 ## 11. Project Structure
-
+```
 controller/
 service/
 repository/
 dto/
 exception/
 security/
-
+```
 ---
 
 ## 12. Future Improvements
