@@ -10,6 +10,7 @@ import com.verdorabackend.dto.response.SignupResponse;
 import com.verdorabackend.security.CookieService;
 import com.verdorabackend.service.AuthService;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -55,4 +56,16 @@ public class AuthController {
         );
     }
 
+    @PostMapping("/refresh")
+    public ResponseEntity<?> refresh(HttpServletRequest request, HttpServletResponse response) {
+        String refreshToken = cookieService.extractRefreshToken(request);
+        String newAccessToken = authService.refresh(refreshToken);
+        cookieService.addAccessToken(response, newAccessToken);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/logout")
+    public void logout(HttpServletResponse response) {
+        cookieService.clearAuthCookies(response);
+    }
 }

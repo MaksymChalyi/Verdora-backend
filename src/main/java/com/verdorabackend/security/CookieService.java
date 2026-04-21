@@ -8,6 +8,20 @@ import org.springframework.stereotype.Component;
 @Component
 public class CookieService {
 
+    public void clearAuthCookies(HttpServletResponse response) {
+
+        Cookie access = new Cookie("accessToken", null);
+        access.setMaxAge(0);
+        access.setPath("/");
+
+        Cookie refresh = new Cookie("refreshToken", null);
+        refresh.setMaxAge(0);
+        refresh.setPath("/auth/refresh");
+
+        response.addCookie(access);
+        response.addCookie(refresh);
+    }
+
     public void addAccessToken(HttpServletResponse response, String token) {
         Cookie cookie = new Cookie("accessToken", token);
         cookie.setHttpOnly(true);

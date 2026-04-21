@@ -7,9 +7,12 @@ import com.verdorabackend.dto.response.SignupResponse;
 import com.verdorabackend.entity.Role;
 import com.verdorabackend.entity.User;
 import com.verdorabackend.exception.InvalidCredentialsException;
+import com.verdorabackend.exception.InvalidTokenException;
 import com.verdorabackend.exception.UserAlreadyExistsException;
+import com.verdorabackend.exception.WrongTokenTypeException;
 import com.verdorabackend.mapper.UserMapper;
 import com.verdorabackend.repository.UserRepository;
+import com.verdorabackend.security.CustomUserDetailsService;
 import com.verdorabackend.security.JwtService;
 import com.verdorabackend.security.UserPrincipal;
 import com.verdorabackend.service.AuthService;
@@ -17,6 +20,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,6 +35,7 @@ public class AuthServiceImpl implements AuthService {
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
+    private final CustomUserDetailsService userDetailsService;
 
     @Override
     @Transactional
@@ -69,6 +74,26 @@ public class AuthServiceImpl implements AuthService {
         String refreshToken = jwtService.generateRefreshToken(new UserPrincipal(user));
         log.info("User logged in: userId={}, email={}", user.getId(), user.getEmail());
         return new AuthResult(user.getEmail(), accessToken, refreshToken);
+    }
+
+    @Override
+    public String refresh(String refreshToken) {
+
+        if (refreshToken == null) {
+            throw new InvalidTokenException();
+        }
+        if (!jwtService.isRefreshToken(refreshToken)) {
+            throw new WrongTokenTypeException();
+        }
+
+        String email = jwtService.extractUsername(refreshToken);
+        UserDetails userDetails = userDetailsService.loadUserByUsername(email);
+
+        if (!jwtService.isTokenValid(refreshToken, userDetails)) {
+            throw new InvalidTokenException();
+        }
+
+        return jwtService.generateAccessToken(userDetails);
     }
 
 }

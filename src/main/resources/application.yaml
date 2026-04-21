@@ -13,4 +13,4 @@ server:
 jwt:
   secret: my-super-secret-key-my-super-secret-key-123456
   access-expiration: 900000 # 15 min
-  refresh-expiration: 604800000 #7 days
+  refresh-expiration: 604800000 # 7 days
