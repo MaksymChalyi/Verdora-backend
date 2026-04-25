@@ -7,7 +7,7 @@ import com.verdorabackend.dto.response.SignupResponse;
 
 public interface AuthService {
 
-    SignupResponse signup(SignUpRequest signupRequest);
+    AuthResult signup(SignUpRequest signupRequest);
 
     AuthResult login(SignInRequest signupRequest);
 
