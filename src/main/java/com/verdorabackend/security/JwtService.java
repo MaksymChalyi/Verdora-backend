@@ -36,11 +36,20 @@ public class JwtService {
                 .compact();
     }
 
-    public boolean isTokenValid(String token, UserDetails userDetails) {
-        String username = extractUsername(token);
-        return username.equals(userDetails.getUsername())
-                && isAccessToken(token)
-                && !isTokenExpired(token);
+    public boolean isRefreshTokenValid(String token, UserDetails userDetails) {
+        Claims claims = getValidatedClaims(token);
+        return userDetails.getUsername().equals(claims.getSubject())
+                && "refresh".equals(claims.get("type", String.class));
+    }
+
+    public boolean isAccessTokenValid(String token, UserDetails userDetails) {
+        Claims claims = getValidatedClaims(token);
+        return userDetails.getUsername().equals(claims.getSubject())
+                && "access".equals(claims.get("type", String.class));
+    }
+
+    private Claims getValidatedClaims(String token) {
+        return extractAllClaims(token);
     }
 
     public boolean isAccessToken(String token) {
