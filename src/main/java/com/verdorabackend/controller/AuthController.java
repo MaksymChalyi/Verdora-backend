@@ -190,7 +190,6 @@ public class AuthController {
     public ResponseEntity<BaseResponse<Void>> refresh(HttpServletRequest request, HttpServletResponse response) {
         String refreshToken = cookieService.extractRefreshToken(request);
         String newAccessToken = authService.refresh(refreshToken);
-        System.out.println("Refresh token: " + refreshToken);
         cookieService.addAccessToken(response, newAccessToken);
         return ResponseEntity.ok(
                 BaseResponseFactory.success(HttpStatus.OK, "Token refreshed")
