@@ -31,7 +31,7 @@ public class JwtService {
                 .setSubject(userDetails.getUsername())
                 .claim("type", "refresh")
                 .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + jwtProperties.getRefreshExpiration()))
+                .setExpiration(new Date(System.currentTimeMillis() + jwtProperties.getRefreshExpirationMs()))
                 .signWith(getSecretKey())
                 .compact();
     }
@@ -93,7 +93,7 @@ public class JwtService {
                 .setSubject(userDetails.getUsername())
                 .claim("type", "access")
                 .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + jwtProperties.getAccessExpiration()))
+                .setExpiration(new Date(System.currentTimeMillis() + jwtProperties.getAccessExpirationMs()))
                 .signWith(getSecretKey())
                 .compact();
     }

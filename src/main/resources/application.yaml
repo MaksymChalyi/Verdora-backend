@@ -1,16 +1,29 @@
+server:
+  port: ${SERVER_PORT:8081}
+
 spring:
   application:
-    name: Verdora-backend
+    name: verdora-backend
+
   datasource:
     driver-class-name: ${DB_DRIVER}
     url: ${DB_URL}
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
 
-server:
-  port: 8081
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID}
+            client-secret: ${GOOGLE_CLIENT_SECRET}
+            scope: [ email, profile ]
 
-jwt:
-  secret: my-super-secret-key-my-super-secret-key-123456
-  access-expiration: 900000 # 15 min
-  refresh-expiration: 604800000 # 7 days
+app:
+  oauth2:
+    redirect-uri: ${REDIRECT_URL:http://localhost:5173}
+  jwt:
+    secret: ${JWT_SECRET:3qzqVSvMGFVncul6arlN0Na0F/YcSbmJyvICg43Q2cQ=}
+    access-expiration-ms: 900000 # 15 min
+    refresh-expiration-ms: 604800000 # 7 days

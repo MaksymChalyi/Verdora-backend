@@ -96,4 +96,25 @@ public class AuthServiceImpl implements AuthService {
         return jwtService.generateAccessToken(userDetails);
     }
 
+    @Override
+    @Transactional
+    public AuthResult loginOrRegisterGoogleUser(String email, String name) {
+        User user = userRepository.findUserByEmail(email)
+                .orElseGet(() -> {
+                    User newUser = new User();
+                    newUser.setEmail(email);
+                    newUser.setName(name);
+                    newUser.setRole(Role.USER);
+                    newUser.setPasswordHash("GOOGLE_OAUTH2_USER");
+                    return userRepository.save(newUser);
+                });
+
+        UserPrincipal principal = new UserPrincipal(user);
+
+        String accessToken = jwtService.generateAccessToken(principal);
+        String refreshToken = jwtService.generateRefreshToken(principal);
+
+        return new AuthResult(user.getEmail(), accessToken, refreshToken);
+    }
+
 }

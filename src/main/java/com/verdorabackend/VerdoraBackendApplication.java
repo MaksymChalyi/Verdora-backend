@@ -1,11 +1,12 @@
 package com.verdorabackend;
 
 import com.verdorabackend.security.JwtProperties;
+import com.verdorabackend.security.OAuth2Properties;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 
-@EnableConfigurationProperties(JwtProperties.class)
+@EnableConfigurationProperties({JwtProperties.class, OAuth2Properties.class})
 @SpringBootApplication
 public class VerdoraBackendApplication {
 
