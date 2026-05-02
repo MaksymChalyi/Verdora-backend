@@ -59,12 +59,13 @@ public class CategoryController {
             @RequestBody @Valid CategoryRequest request
     ) {
         log.info("Request to create category: {}", request.name());
+        CategoryResponse response = categoryService.createCategory(request);
 
         return ResponseEntity.status(HttpStatus.CREATED).body(
                 BaseResponseFactory.success(
                         HttpStatus.CREATED,
-                        "Category created successfully",
-                        categoryService.createCategory(request)
+                        "Category created",
+                        response
                 )
         );
     }
@@ -73,18 +74,17 @@ public class CategoryController {
             summary = "Update category",
             description = "Updates existing category by ID"
     )
-    @PutMapping("/{categoryId}")
+    @PutMapping("/{id}")
     public ResponseEntity<BaseResponse<CategoryResponse>> updateCategory(
-            @PathVariable String categoryId,
+            @PathVariable Long id,
             @RequestBody @Valid CategoryRequest request
     ) {
-        log.info("Request to update category id={}", categoryId);
-
+        CategoryResponse response = categoryService.updateCategory(id, request);
         return ResponseEntity.ok(
                 BaseResponseFactory.success(
                         HttpStatus.OK,
-                        "Category updated successfully",
-                        categoryService.updateCategory(categoryId, request)
+                        "Category updated",
+                        response
                 )
         );
     }
@@ -93,14 +93,12 @@ public class CategoryController {
             summary = "Delete category",
             description = "Deletes category by ID"
     )
-    @DeleteMapping("/{categoryId}")
+    @DeleteMapping("/{id}")
     public ResponseEntity<BaseResponse<Void>> deleteCategory(
-            @PathVariable String categoryId
+            @PathVariable Long id
     ) {
-        log.info("Request to delete category id={}", categoryId);
-
-        categoryService.deleteCategory(categoryId);
-
+        log.info("Request to delete category id={}", id);
+        categoryService.deleteCategory(id);
         return ResponseEntity.ok(
                 BaseResponseFactory.success(
                         HttpStatus.OK,

@@ -7,7 +7,7 @@ public interface CategoryService {
 
     CategoryResponse createCategory(CategoryRequest categoryRequest);
 
-    CategoryResponse updateCategory(String categoryId, CategoryRequest categoryRequest);
+    CategoryResponse updateCategory(Long categoryId, CategoryRequest categoryRequest);
 
-    void deleteCategory(String categoryId);
+    void deleteCategory(Long categoryId);
 }

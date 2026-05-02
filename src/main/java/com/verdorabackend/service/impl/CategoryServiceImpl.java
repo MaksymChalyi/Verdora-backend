@@ -22,57 +22,33 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     @Transactional
-    public CategoryResponse createCategory(CategoryRequest categoryRequest) {
-        log.debug("Creating category with name: {}", categoryRequest.name());
-
-        Category category = categoryMapper.toEntity(categoryRequest);
-
-
+    public CategoryResponse createCategory(CategoryRequest request) {
+        log.debug("Creating category with name: {}", request.name());
+        Category category = categoryMapper.toEntity(request);
         Category saved = categoryRepository.save(category);
-
-        log.info("Category created successfully: id={}, name={}",
-                saved.getId(), saved.getName());
-
+        log.info("Category created, id={}", saved.getId());
         return categoryMapper.toResponse(saved);
     }
 
     @Override
     @Transactional
-    public CategoryResponse updateCategory(String categoryId, CategoryRequest categoryRequest) {
-       log.debug("Updating category if={}", categoryId);
-
-       Long id = Long.parseLong(categoryId);
-
-       Category category = categoryRepository.findById(id)
-               .orElseThrow(() -> {
-                   log.warn("Category not found for update, id={}", categoryId);
-                   return new CategoryNotFoundException();
-               });
-
-       category.setName(categoryRequest.name());
-
-       Category updated = categoryRepository.save(category);
-
-       log.info("Category updated successfully: id={}", updated.getId());
-
-       return categoryMapper.toResponse(updated);
+    public CategoryResponse updateCategory(Long id, CategoryRequest request) {
+        Category category = getByIdOrThrow(id);
+        category.setName(request.name());
+        log.info("Category updated, id={}", id);
+        return categoryMapper.toResponse(category);
     }
 
     @Override
     @Transactional
-    public void deleteCategory(String categoryId) {
+    public void deleteCategory(Long id) {
+        Category category = getByIdOrThrow(id);
+        categoryRepository.delete(category);
+        log.info("Category deleted, id={}", id);
+    }
 
-        log.debug("Deleting category id={}", categoryId);
-
-        Long id = Long.parseLong(categoryId);
-
-        if (!categoryRepository.existsById(id)) {
-            log.warn("Category not found for delete, id={}", categoryId);
-            throw new CategoryNotFoundException();
-        }
-
-        categoryRepository.deleteById(id);
-
-        log.info("Category deleted successfully: id={}", categoryId);
+    private Category getByIdOrThrow(Long id) {
+        return categoryRepository.findById(id)
+                .orElseThrow(() -> new CategoryNotFoundException(id));
     }
 }
