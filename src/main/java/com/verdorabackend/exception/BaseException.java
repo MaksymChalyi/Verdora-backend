@@ -8,7 +8,7 @@ public class BaseException extends RuntimeException {
 
     private final HttpStatus status;
 
-    public BaseException(HttpStatus  status, String message) {
+    public BaseException(HttpStatus status, String message) {
         super(message);
         this.status = status;
     }

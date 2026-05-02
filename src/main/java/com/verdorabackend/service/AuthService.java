@@ -11,4 +11,6 @@ public interface AuthService {
     AuthResult login(SignInRequest signupRequest);
 
     String refresh(String refreshToken);
+
+    AuthResult loginOrRegisterGoogleUser(String email, String name);
 }

@@ -63,13 +63,11 @@ public class AuthServiceImpl implements AuthService {
         // - compares raw password with stored hash using PasswordEncoder
         // - throws exception if credentials are invalid
         authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        request.email(),
-                        request.password()
-                )
-        );
-        User user = userRepository.findUserByEmail(request.email())
-                .orElseThrow(InvalidCredentialsException::new);
+                new UsernamePasswordAuthenticationToken(request.email(), request.password()));
+        User user =
+                userRepository
+                        .findUserByEmail(request.email())
+                        .orElseThrow(InvalidCredentialsException::new);
         String accessToken = jwtService.generateAccessToken(new UserPrincipal(user));
         String refreshToken = jwtService.generateRefreshToken(new UserPrincipal(user));
         log.info("User logged in: userId={}, email={}", user.getId(), user.getEmail());
@@ -99,15 +97,18 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public AuthResult loginOrRegisterGoogleUser(String email, String name) {
-        User user = userRepository.findUserByEmail(email)
-                .orElseGet(() -> {
-                    User newUser = new User();
-                    newUser.setEmail(email);
-                    newUser.setName(name);
-                    newUser.setRole(Role.USER);
-                    newUser.setPasswordHash("GOOGLE_OAUTH2_USER");
-                    return userRepository.save(newUser);
-                });
+        User user =
+                userRepository
+                        .findUserByEmail(email)
+                        .orElseGet(
+                                () -> {
+                                    User newUser = new User();
+                                    newUser.setEmail(email);
+                                    newUser.setName(name);
+                                    newUser.setRole(Role.USER);
+                                    newUser.setPasswordHash("GOOGLE_OAUTH2_USER");
+                                    return userRepository.save(newUser);
+                                });
 
         UserPrincipal principal = new UserPrincipal(user);
 
@@ -116,5 +117,4 @@ public class AuthServiceImpl implements AuthService {
 
         return new AuthResult(user.getEmail(), accessToken, refreshToken);
     }
-
 }

@@ -2,12 +2,11 @@ package com.verdorabackend.entity;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-
-import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
 
 @Entity
 @Table(name = "users")
@@ -52,7 +51,6 @@ public class User {
     @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt;
 
-
     @PrePersist
     public void prePersist() {
         OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
@@ -64,5 +62,4 @@ public class User {
     public void preUpdate() {
         this.updatedAt = OffsetDateTime.now(ZoneOffset.UTC);
     }
-
 }

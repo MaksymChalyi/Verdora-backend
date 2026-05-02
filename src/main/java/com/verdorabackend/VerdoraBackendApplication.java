@@ -13,5 +13,4 @@ public class VerdoraBackendApplication {
     public static void main(String[] args) {
         SpringApplication.run(VerdoraBackendApplication.class, args);
     }
-
 }

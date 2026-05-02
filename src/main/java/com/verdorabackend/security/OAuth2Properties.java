@@ -4,12 +4,10 @@ import lombok.Getter;
 import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
+@ConfigurationProperties(prefix = "app.oauth2")
 @Getter
 @Setter
-@ConfigurationProperties(prefix = "app.jwt")
-public class JwtProperties {
+public class OAuth2Properties {
 
-    private String secret;
-    private long accessExpirationMs;
-    private long refreshExpirationMs;
+    private String redirectUri;
 }

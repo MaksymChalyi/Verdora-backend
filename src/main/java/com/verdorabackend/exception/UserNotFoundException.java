@@ -7,5 +7,4 @@ public class UserNotFoundException extends BaseException {
     public UserNotFoundException() {
         super(HttpStatus.NOT_FOUND, "User not found");
     }
-
 }

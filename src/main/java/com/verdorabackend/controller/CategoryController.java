@@ -28,18 +28,20 @@ public class CategoryController {
 
     private final CategoryService categoryService;
 
-    @Operation(
-            summary = "Create category",
-            description = "Creates a new product category"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(
-                    responseCode = "201",
-                    description = "Category created",
-                    content = @Content(
-                            mediaType = "application/json",
-                            schema = @Schema(implementation = BaseResponse.class),
-                            examples = @ExampleObject(value = """
+    @Operation(summary = "Create category", description = "Creates a new product category")
+    @ApiResponses(
+            value = {
+                @ApiResponse(
+                        responseCode = "201",
+                        description = "Category created",
+                        content =
+                                @Content(
+                                        mediaType = "application/json",
+                                        schema = @Schema(implementation = BaseResponse.class),
+                                        examples =
+                                                @ExampleObject(
+                                                        value =
+                                                                """
                                     {
                                       "timestamp": "2026-04-26T12:00:00Z",
                                       "status": 201,
@@ -49,62 +51,35 @@ public class CategoryController {
                                         "category": "Electronics"
                                       }
                                     }
-                                    """)
-                    )
-            )
-    })
-
+                                    """)))
+            })
     @PostMapping
     public ResponseEntity<BaseResponse<CategoryResponse>> createCategory(
-            @RequestBody @Valid CategoryRequest request
-    ) {
+            @RequestBody @Valid CategoryRequest request) {
         log.info("Request to create category: {}", request.name());
         CategoryResponse response = categoryService.createCategory(request);
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(
-                BaseResponseFactory.success(
-                        HttpStatus.CREATED,
-                        "Category created",
-                        response
-                )
-        );
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(
+                        BaseResponseFactory.success(
+                                HttpStatus.CREATED, "Category created", response));
     }
 
-    @Operation(
-            summary = "Update category",
-            description = "Updates existing category by ID"
-    )
+    @Operation(summary = "Update category", description = "Updates existing category by ID")
     @PutMapping("/{id}")
     public ResponseEntity<BaseResponse<CategoryResponse>> updateCategory(
-            @PathVariable Long id,
-            @RequestBody @Valid CategoryRequest request
-    ) {
+            @PathVariable Long id, @RequestBody @Valid CategoryRequest request) {
         CategoryResponse response = categoryService.updateCategory(id, request);
         return ResponseEntity.ok(
-                BaseResponseFactory.success(
-                        HttpStatus.OK,
-                        "Category updated",
-                        response
-                )
-        );
+                BaseResponseFactory.success(HttpStatus.OK, "Category updated", response));
     }
 
-    @Operation(
-            summary = "Delete category",
-            description = "Deletes category by ID"
-    )
+    @Operation(summary = "Delete category", description = "Deletes category by ID")
     @DeleteMapping("/{id}")
-    public ResponseEntity<BaseResponse<Void>> deleteCategory(
-            @PathVariable Long id
-    ) {
+    public ResponseEntity<BaseResponse<Void>> deleteCategory(@PathVariable Long id) {
         log.info("Request to delete category id={}", id);
         categoryService.deleteCategory(id);
         return ResponseEntity.ok(
-                BaseResponseFactory.success(
-                        HttpStatus.NOT_FOUND,
-                        "Category deleted successfully"
-                )
-        );
+                BaseResponseFactory.success(HttpStatus.NOT_FOUND, "Category deleted successfully"));
     }
 }
-
