@@ -16,26 +16,34 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(BaseException.class)
     public ResponseEntity<BaseResponse<Void>> handleApiException(BaseException exception) {
-        return ResponseEntity.status(exception.getStatus())
-                .body(BaseResponseFactory.error(exception.getStatus(), exception.getMessage()));
+        return ResponseEntity
+                .status(exception.getStatus())
+                .body(BaseResponseFactory.error(
+                        exception.getStatus(),
+                        exception.getMessage()
+                ));
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<BaseResponse<Void>> handleGeneric(Exception ex) {
         log.error("Unhandled exception", ex);
 
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(
-                        BaseResponseFactory.error(
-                                HttpStatus.INTERNAL_SERVER_ERROR, "Internal server error"));
+        return ResponseEntity
+                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(BaseResponseFactory.error(
+                        HttpStatus.INTERNAL_SERVER_ERROR,
+                        "Internal server error"
+                ));
     }
 
     @ExceptionHandler(BadCredentialsException.class)
-    public ResponseEntity<BaseResponse<Void>> handleBadCredentials(
-            BadCredentialsException exception) {
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(
-                        BaseResponseFactory.error(
-                                HttpStatus.UNAUTHORIZED, "Invalid email or password"));
+    public ResponseEntity<BaseResponse<Void>> handleBadCredentials(BadCredentialsException exception) {
+        return ResponseEntity
+                .status(HttpStatus.UNAUTHORIZED)
+                .body(BaseResponseFactory.error(
+                        HttpStatus.UNAUTHORIZED,
+                        "Invalid email or password"
+                ));
     }
+
 }

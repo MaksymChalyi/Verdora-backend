@@ -4,8 +4,9 @@ import com.verdorabackend.entity.User;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
-import java.util.Optional;
 import org.springframework.data.repository.CrudRepository;
+
+import java.util.Optional;
 
 public interface UserRepository extends CrudRepository<User, Long> {
 

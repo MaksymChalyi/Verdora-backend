@@ -4,7 +4,7 @@ import org.springframework.http.HttpStatus;
 
 public class WrongTokenTypeException extends BaseException {
 
-    public WrongTokenTypeException() {
+    public WrongTokenTypeException( ) {
         super(HttpStatus.UNAUTHORIZED, "Invalid token type");
     }
 }

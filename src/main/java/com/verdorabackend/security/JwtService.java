@@ -30,10 +30,7 @@ public class JwtService {
                 .setSubject(userDetails.getUsername())
                 .claim("type", "refresh")
                 .setIssuedAt(new Date())
-                .setExpiration(
-                        new Date(
-                                System.currentTimeMillis()
-                                        + jwtProperties.getRefreshExpirationMs()))
+                .setExpiration(new Date(System.currentTimeMillis() + jwtProperties.getRefreshExpirationMs()))
                 .signWith(getSecretKey())
                 .compact();
     }

@@ -1,8 +1,10 @@
 package com.verdorabackend.security;
 
 import com.verdorabackend.entity.User;
+import com.verdorabackend.exception.UserNotFoundException;
 import com.verdorabackend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -16,10 +18,9 @@ public class CustomUserDetailsService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        User user =
-                userRepository
-                        .findUserByEmail(email)
-                        .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        User user = userRepository.findUserByEmail(email)
+                .orElseThrow(UserNotFoundException::new);
         return new UserPrincipal(user);
     }
+
 }

@@ -248,12 +248,6 @@
                 <version>2.43.0</version>
                 <configuration>
                     <java>
-                        <!-- Google Java Format: industry-standard style, no config needed -->
-                        <googleJavaFormat>
-                            <version>1.22.0</version>
-                            <!-- AOSP = 4-space indent (Android style), default GOOGLE = 2-space -->
-                            <style>AOSP</style>
-                        </googleJavaFormat>
 
                         <!-- Remove unused imports -->
                         <removeUnusedImports/>

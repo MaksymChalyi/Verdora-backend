@@ -27,24 +27,27 @@ public class HealthCheckController {
     @ApiResponse(
             responseCode = "200",
             description = "Service is alive",
-            content =
-                    @Content(
-                            mediaType = "application/json",
-                            schema = @Schema(implementation = BaseResponse.class),
-                            examples =
-                                    @ExampleObject(
-                                            value =
-                                                    """
+            content = @Content(
+                    mediaType = "application/json",
+                    schema = @Schema(implementation = BaseResponse.class),
+                    examples = @ExampleObject(value = """
                             {
                               "timestamp": "2026-04-21T13:55:49.772Z",
                               "status": 200,
                               "message": "Service is alive",
                               "data": "pong"
                             }
-                            """)))
+                            """)
+            )
+    )
     @GetMapping("/ping")
     public ResponseEntity<BaseResponse<String>> ping() {
         return ResponseEntity.ok(
-                BaseResponseFactory.success(HttpStatus.OK, "Service is alive", "pong"));
+                BaseResponseFactory.success(
+                        HttpStatus.OK,
+                        "Service is alive",
+                        "pong"
+                )
+        );
     }
 }
