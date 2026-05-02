@@ -101,10 +101,9 @@ public class CategoryController {
         categoryService.deleteCategory(id);
         return ResponseEntity.ok(
                 BaseResponseFactory.success(
-                        HttpStatus.OK,
+                        HttpStatus.NOT_FOUND,
                         "Category deleted successfully"
                 )
         );
     }
 }
-

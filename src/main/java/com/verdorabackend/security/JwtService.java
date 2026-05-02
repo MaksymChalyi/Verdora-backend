@@ -7,14 +7,13 @@ import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
-import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.stereotype.Service;
-
-import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.function.Function;
+import javax.crypto.SecretKey;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
@@ -31,16 +30,25 @@ public class JwtService {
                 .setSubject(userDetails.getUsername())
                 .claim("type", "refresh")
                 .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + jwtProperties.getRefreshExpiration()))
+                .setExpiration(new Date(System.currentTimeMillis() + jwtProperties.getRefreshExpirationMs()))
                 .signWith(getSecretKey())
                 .compact();
     }
 
-    public boolean isTokenValid(String token, UserDetails userDetails) {
-        String username = extractUsername(token);
-        return username.equals(userDetails.getUsername())
-                && isAccessToken(token)
-                && !isTokenExpired(token);
+    public boolean isRefreshTokenValid(String token, UserDetails userDetails) {
+        Claims claims = getValidatedClaims(token);
+        return userDetails.getUsername().equals(claims.getSubject())
+                && "refresh".equals(claims.get("type", String.class));
+    }
+
+    public boolean isAccessTokenValid(String token, UserDetails userDetails) {
+        Claims claims = getValidatedClaims(token);
+        return userDetails.getUsername().equals(claims.getSubject())
+                && "access".equals(claims.get("type", String.class));
+    }
+
+    private Claims getValidatedClaims(String token) {
+        return extractAllClaims(token);
     }
 
     public boolean isAccessToken(String token) {
@@ -66,8 +74,7 @@ public class JwtService {
 
     private Claims extractAllClaims(String token) {
         try {
-            return Jwts
-                    .parserBuilder()
+            return Jwts.parserBuilder()
                     .setSigningKey(getSecretKey())
                     .build()
                     .parseClaimsJws(token)
@@ -84,7 +91,9 @@ public class JwtService {
                 .setSubject(userDetails.getUsername())
                 .claim("type", "access")
                 .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + jwtProperties.getAccessExpiration()))
+                .setExpiration(
+                        new Date(
+                                System.currentTimeMillis() + jwtProperties.getAccessExpirationMs()))
                 .signWith(getSecretKey())
                 .compact();
     }
@@ -93,5 +102,4 @@ public class JwtService {
     private SecretKey getSecretKey() {
         return Keys.hmacShaKeyFor(jwtProperties.getSecret().getBytes(StandardCharsets.UTF_8));
     }
-
 }

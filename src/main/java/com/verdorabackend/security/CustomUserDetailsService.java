@@ -1,6 +1,7 @@
 package com.verdorabackend.security;
 
 import com.verdorabackend.entity.User;
+import com.verdorabackend.exception.UserNotFoundException;
 import com.verdorabackend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 
@@ -18,7 +19,7 @@ public class CustomUserDetailsService implements UserDetailsService {
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
         User user = userRepository.findUserByEmail(email)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+                .orElseThrow(UserNotFoundException::new);
         return new UserPrincipal(user);
     }
 

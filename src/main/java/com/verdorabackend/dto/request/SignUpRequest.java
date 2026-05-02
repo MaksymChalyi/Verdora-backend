@@ -20,4 +20,3 @@ public record SignUpRequest(
         String password
 ) {
 }
-
