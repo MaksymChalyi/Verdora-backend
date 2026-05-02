@@ -209,6 +209,6 @@ resources/db/migration/
 
 ## Documentation
 
-- [Sign In](docs/auth/sign-in.md)
-- [Sign Up](docs/auth/sign-up.md)
-- [Google OAuth](docs/auth/google-oauth.md)
+- [Sign In](./auth/sign-in.md)
+- [Sign Up](./auth/sign-up.md)
+- [Google OAuth](./auth/google-oauth.md)
