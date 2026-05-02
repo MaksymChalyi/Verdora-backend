@@ -238,10 +238,10 @@
                 </executions>
             </plugin>
             <!--
-    Spotless: enforces consistent code formatting.
-    mvn spotless:apply  — auto-formats all Java files
-    mvn spotless:check  — fails the build if any file is not formatted (good for CI)
--->
+                Spotless: enforces consistent code formatting.
+                mvn spotless:apply  — auto-formats all Java files
+                mvn spotless:check  — fails the build if any file is not formatted (good for CI)
+            -->
             <plugin>
                 <groupId>com.diffplug.spotless</groupId>
                 <artifactId>spotless-maven-plugin</artifactId>
