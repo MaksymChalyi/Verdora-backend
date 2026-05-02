@@ -12,5 +12,4 @@ public class BaseException extends RuntimeException {
         super(message);
         this.status = status;
     }
-
 }
