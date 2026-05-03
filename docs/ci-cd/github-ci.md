@@ -2,10 +2,11 @@
 
 ## What is CI
 
-**CI (Continuous Integration)** — automatically validates code on every push. Builds the project, runs tests. If something breaks — it's visible immediately.
+**CI (Continuous Integration)** — automatically validates code on every push. Builds the project, runs tests, checks formatting. If something breaks — it's visible immediately before it reaches `main`.
 
 **Why it matters:**
 - Broken code cannot reach `main`
+- Formatting issues are caught automatically — no "I forgot to run spotless"
 - Every developer gets instant feedback on their changes
 - Required status checks block merge until CI is green
 
@@ -27,28 +28,20 @@ sequenceDiagram
         PG-->>Runner: not ready yet
     end
     PG-->>Runner: healthy ✅
-    Runner->>Runner: actions/checkout — clone repo
-    Runner->>Runner: actions/setup-java — install Java 21 + restore Maven cache
-    Runner->>PG: mvn clean verify (Spring Boot connects to localhost:5432)
-    PG-->>Runner: Flyway migrations applied
-    Runner->>Runner: Run all tests
-    Runner-->>GitHub: ✅ success / ❌ failure
+    Runner->>Runner: Checkout code
+    Runner->>Runner: Set up Java 21 + restore Maven cache
+    Runner->>Runner: Build (mvn clean compile)
+    Runner->>PG: Run tests (mvn test)
+    PG-->>Runner: Flyway migrations applied, tests run
+    Runner->>Runner: Package (mvn package -DskipTests)
+    Runner->>Runner: Spotless check (mvn spotless:check)
+    Runner-->>GitHub: ✅ all steps green / ❌ step failed
     GitHub-->>Dev: Status check result on PR
 ```
 
 ---
 
 ## When CI Runs
-
-```yaml
-on:
-  push:
-    branches:
-      - '**'        # any branch on push, including main
-  pull_request:
-    branches:
-      - main        # when opening a PR into main
-```
 
 | Event | CI runs? |
 |---|---|
@@ -76,6 +69,17 @@ jobs:
   build-and-test:
     runs-on: ubuntu-latest
 
+    env:
+      DB_DRIVER: org.postgresql.Driver
+      DB_URL: jdbc:postgresql://localhost:5432/verdora_db
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      JWT_SECRET: test-secret-key-for-ci-at-least-32-chars!!
+      GOOGLE_CLIENT_ID: test
+      GOOGLE_CLIENT_SECRET: test
+      REDIRECT_URL: http://localhost:5173
+      SERVER_PORT: 8081
+
     services:
       postgres:
         image: postgres:16-alpine
@@ -102,152 +106,84 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
-      - name: Build and test
-        env:
-          DB_DRIVER: org.postgresql.Driver
-          DB_URL: jdbc:postgresql://localhost:5432/verdora_db
-          DB_USERNAME: postgres
-          DB_PASSWORD: postgres
-          JWT_SECRET: test-secret-key-for-ci-at-least-32-chars!!
-          GOOGLE_CLIENT_ID: test
-          GOOGLE_CLIENT_SECRET: test
-          REDIRECT_URL: http://localhost:5173
-          SERVER_PORT: 8081
-        run: mvn clean verify -B
+      - name: Build
+        run: mvn clean compile -B
+
+      - name: Run tests
+        run: mvn test -B
+
+      - name: Package
+        run: mvn package -DskipTests -B
+
+      - name: Spotless check
+        run: mvn spotless:check -B
 ```
 
 ---
 
-## Line by Line
+## Steps Breakdown
 
-### `name` and `on`
+### What you see in GitHub Actions UI
 
-`name: CI` — workflow name displayed on the Actions tab in GitHub.
-
-`on` — defines what triggers the workflow. `'**'` is a wildcard matching any branch including `main`.
-
-### `jobs`
-
-```yaml
-jobs:
-  build-and-test:
-    runs-on: ubuntu-latest
+```
+✅ Set up job              2s
+✅ Initialize containers   20s   ← PostgreSQL healthcheck
+✅ Checkout code           1s
+✅ Set up Java 21          0s    ← restored from cache
+✅ Build                   15s   ← mvn clean compile
+✅ Run tests               25s   ← mvn test + Flyway + Spring context
+✅ Package                 10s   ← mvn package -DskipTests
+✅ Spotless check          5s    ← mvn spotless:check
+✅ Complete job            0s
 ```
 
-`build-and-test` — job name. This is the name you add as a required status check in Branch Protection Rules — merge is blocked until this job passes.
-
-`runs-on: ubuntu-latest` — GitHub spins up a clean Ubuntu machine for every run. Free for public repositories. The machine is destroyed after the job completes.
-
-### `services` — PostgreSQL for tests
-
-```yaml
-services:
-  postgres:
-    image: postgres:16-alpine
-    ...
-    options: >-
-      --health-cmd "pg_isready -U postgres"
-      --health-interval 10s
-      --health-timeout 5s
-      --health-retries 5
-```
-
-GitHub starts a PostgreSQL container on the runner machine alongside your code. Spring Boot connects to it via `localhost:5432` during tests.
-
-`options: >-` — YAML syntax for a multiline string without line breaks. These options are passed as arguments to `docker run` — equivalent to `healthcheck` in `docker-compose` but in a different format.
-
-The key difference from `docker-compose`:
-
-| | `docker-compose` | GitHub Actions `services` |
-|---|---|---|
-| Healthcheck format | YAML block | `--health-cmd` option |
-| DB host from app | `db:5432` (service name) | `localhost:5432` (runner network) |
-| Purpose | Local development | CI environment |
-
-In GitHub Actions, the service is available via `localhost` because the container and the runner share the same network.
-
-### `steps`
-
-```yaml
-- name: Checkout code
-  uses: actions/checkout@v4
-```
-
-Clones your repository onto the runner. Without this step — there is no code. `actions/checkout@v4` is an official GitHub action. `@v4` is the version tag.
-
-```yaml
-- name: Set up Java 21
-  uses: actions/setup-java@v4
-  with:
-    java-version: '21'
-    distribution: 'temurin'
-    cache: maven
-```
-
-Installs Java 21 on the runner. `distribution: 'temurin'` — Eclipse Temurin (same as in the Dockerfile). `cache: maven` — caches `~/.m2` between runs. First run downloads all dependencies (~2-3 min), subsequent runs restore from cache (~20 sec). GitHub manages the cache automatically.
-
-```yaml
-- name: Build and test
-  env:
-    JWT_SECRET: test-secret-key-for-ci-at-least-32-chars!!
-    GOOGLE_CLIENT_ID: test
-    GOOGLE_CLIENT_SECRET: test
-    ...
-  run: mvn clean verify -B
-```
-
-`env` — environment variables for this step. Spring Boot reads them instead of `.env` (which doesn't exist on the runner).
-
-`JWT_SECRET` is hardcoded here — this is fine for a test environment. Real secrets (`GOOGLE_CLIENT_ID`, etc.) are replaced with `test` because they are not used during tests.
-
-`mvn clean verify -B` — builds the project and runs all tests:
-
-| Command | What it does |
-|---|---|
-| `mvn clean package` | Builds JAR + runs unit tests |
-| `mvn clean verify` | Builds JAR + runs unit tests + integration tests |
-
-`-B` — batch mode, no interactive output or color — cleaner logs in CI.
-
-If any test fails — the step fails, the job fails, merge is blocked.
-
----
-
-## Maven Cache — How It Works
+### Why separate steps matter
 
 ```mermaid
 flowchart TD
-    A["First run\nNo cache"] --> B["Download all dependencies\n~2-3 minutes"]
-    B --> C["GitHub saves ~/.m2 to cache"]
+    A["Build\nmvn clean compile"] --> B{"compiles?"}
+    B -->|"❌ compile error"| F["Fail fast — no need to run tests"]
+    B -->|"✅ ok"| C["Run tests\nmvn test"]
+    C --> D{"tests pass?"}
+    D -->|"❌ test failure"| G["Fail — show exactly which test failed"]
+    D -->|"✅ ok"| E["Package\nmvn package -DskipTests"]
+    E --> H["Spotless check\nmvn spotless:check"]
+    H --> I{"formatted?"}
+    I -->|"❌ not formatted"| J["Fail — developer forgot spotless:apply"]
+    I -->|"✅ ok"| K["✅ All green — Merge allowed"]
 
-    D["Subsequent runs\nCache exists"] --> E["Restore ~/.m2 from cache\n~20 seconds"]
-    E --> F["mvn clean verify\nNo download needed"]
-
-    style A fill:none,stroke:#854F0B,stroke-width:1px
-    style D fill:none,stroke:#1D9E75,stroke-width:1px
+    style F fill:none,stroke:#854F0B,stroke-width:1px
+    style G fill:none,stroke:#854F0B,stroke-width:1px
+    style J fill:none,stroke:#854F0B,stroke-width:1px
+    style K fill:none,stroke:#1D9E75,stroke-width:1px
 ```
-
-Cache is invalidated when `pom.xml` changes — dependencies are re-downloaded. This is the same logic as Docker layer caching.
 
 ---
 
-## Environment Variables in CI vs Local
+## `env` at Job Level
+
+`env` defined at the **job level** is automatically available to all steps — no need to repeat it in every step. Spring Boot reads these variables instead of `.env` (which doesn't exist on the runner).
+
+`JWT_SECRET` is hardcoded — fine for tests. `GOOGLE_CLIENT_ID: test` — placeholder because OAuth2 is not tested in CI.
+
+---
+
+## Spotless in CI — Why It Matters
 
 ```mermaid
 flowchart LR
-    subgraph Local["Local development"]
-        ENV[".env file"] -->|"spring-dotenv reads"| APP1["Spring Boot"]
-    end
+    A["Developer writes code"] --> B{"Ran spotless:apply locally?"}
+    B -->|"✅ yes"| C["Push → CI → Spotless check passes ✅"]
+    B -->|"❌ forgot"| D["Push → CI → Spotless check fails ❌"]
+    D --> E["Developer runs mvn spotless:apply"]
+    E --> F["Push again → CI passes ✅"]
 
-    subgraph CI["GitHub Actions"]
-        YAML["ci.yml env: block"] -->|"runner injects"| APP2["Spring Boot"]
-    end
-
-    style Local fill:none,stroke:#534AB7,stroke-width:1px
-    style CI fill:none,stroke:#1D9E75,stroke-width:1px
+    style D fill:none,stroke:#854F0B,stroke-width:1px
+    style C fill:none,stroke:#1D9E75,stroke-width:1px
+    style F fill:none,stroke:#1D9E75,stroke-width:1px
 ```
 
-`.env` file is in `.gitignore` — it never reaches the runner. CI provides its own values directly in the workflow file. Real secrets (Google OAuth, JWT for production) go into **GitHub Secrets** — used in the CD workflow, not CI.
+`spotless:check` does **not** modify files — it only checks. If any file is not formatted — the step fails with a clear message.
 
 ---
 
@@ -255,18 +191,16 @@ flowchart LR
 
 ```mermaid
 flowchart TD
-    A["Developer opens PR into main"] --> B["CI workflow triggers"]
-    B --> C{"build-and-test passes?"}
-    C -->|"✅ green"| D["Merge allowed"]
-    C -->|"❌ red"| E["Merge blocked"]
-    E --> F["Developer fixes the issue"]
-    F --> B
+    A["Developer opens PR into main"] --> B["CI triggers"]
+    B --> C["Build ✅"] --> D["Run tests ✅"] --> E["Package ✅"] --> F["Spotless check ✅"]
+    F --> G["Merge allowed ✅"]
+    B -->|"any step fails ❌"| H["Merge blocked"]
+    H --> I["Fix and push again"]
+    I --> B
 
-    style D fill:none,stroke:#1D9E75,stroke-width:1px
-    style E fill:none,stroke:#854F0B,stroke-width:1px
+    style G fill:none,stroke:#1D9E75,stroke-width:1px
+    style H fill:none,stroke:#854F0B,stroke-width:1px
 ```
-
-In **Settings → Branches → Branch protection rules** the `build-and-test` job is added as a required status check. GitHub enforces this — no merge without green CI, even for repository owners.
 
 ---
 
@@ -276,9 +210,9 @@ In **Settings → Branches → Branch protection rules** the `build-and-test` jo
 Verdora-backend/
 ├── .github/
 │   └── workflows/
-│       └── ci.yml    ← this file
+│       ├── ci.yml    ← this file
+│       └── cd.yml
 ├── src/
 ├── Dockerfile
-├── docker-compose.yml
 └── pom.xml
 ```
