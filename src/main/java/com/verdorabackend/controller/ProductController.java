@@ -1,10 +1,10 @@
 package com.verdorabackend.controller;
 
-import com.verdorabackend.dto.request.CategoryRequest;
+import com.verdorabackend.dto.request.ProductRequest;
 import com.verdorabackend.dto.response.BaseResponse;
 import com.verdorabackend.dto.response.BaseResponseFactory;
-import com.verdorabackend.dto.response.CategoryResponse;
-import com.verdorabackend.service.CategoryService;
+import com.verdorabackend.dto.response.ProductResponse;
+import com.verdorabackend.service.ProductService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
@@ -24,22 +24,22 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequiredArgsConstructor
 @Slf4j
-@Tag(name = "Category Management", description = "Endpoints for managing product categories")
-@RequestMapping("/categories")
-public class CategoryController {
+@Tag(name = "Product Management", description = "Endpoints for managing products")
+@RequestMapping("/products")
+public class ProductController {
 
-    private final CategoryService categoryService;
+    private final ProductService productService;
 
     @PreAuthorize("hasRole('ADMIN')")
     @SecurityRequirement(name = "Cookie-based Authentication")
     @Operation(
-            summary = "Create category",
-            description = "Creates a new product category"
+            summary = "Create product",
+            description = "Creates a new product"
     )
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "201",
-                    description = "Category created",
+                    description = "Product created",
                     content = @Content(
                             mediaType = "application/json",
                             schema = @Schema(implementation = BaseResponse.class),
@@ -47,28 +47,28 @@ public class CategoryController {
                                     {
                                       "timestamp": "2026-04-26T12:00:00Z",
                                       "status": 201,
-                                      "message": "Category created successfully",
+                                      "message": "Product created successfully",
                                       "data": {
-                                        "categoryId": "1",
-                                        "category": "Electronics"
+                                        "productId": 1,
+                                        "name": "Laptop",
+                                        "price": 500
                                       }
                                     }
                                     """)
                     )
             )
     })
-
     @PostMapping
-    public ResponseEntity<BaseResponse<CategoryResponse>> createCategory(
-            @RequestBody @Valid CategoryRequest request
-    ) {
-        log.info("Request to create category: {}", request.name());
-        CategoryResponse response = categoryService.createCategory(request);
+    public ResponseEntity<BaseResponse<ProductResponse>> createProduct(
+            @RequestBody @Valid ProductRequest request) {
+        log.info("Request to create product: {}", request.name());
+
+        ProductResponse response = productService.createProduct(request);
 
         return ResponseEntity.status(HttpStatus.CREATED).body(
                 BaseResponseFactory.success(
                         HttpStatus.CREATED,
-                        "Category created",
+                        "Product created",
                         response
                 )
         );
@@ -77,40 +77,44 @@ public class CategoryController {
     @PreAuthorize("hasRole('ADMIN')")
     @SecurityRequirement(name = "Cookie-based Authentication")
     @Operation(
-            summary = "Update category",
-            description = "Updates existing category by ID"
+            summary = "Update product",
+            description = "Updates existing product by ID"
     )
     @PutMapping("/{id}")
-    public ResponseEntity<BaseResponse<CategoryResponse>> updateCategory(
+    public ResponseEntity<BaseResponse<ProductResponse>> updateProduct(
             @PathVariable Long id,
-            @RequestBody @Valid CategoryRequest request
-    ) {
-        CategoryResponse response = categoryService.updateCategory(id, request);
+            @RequestBody @Valid ProductRequest request) {
+        log.info("Request to update product id={}", id);
+
+        ProductResponse response = productService.updateProduct(id, request);
+
         return ResponseEntity.ok(
                 BaseResponseFactory.success(
                         HttpStatus.OK,
-                        "Category updated",
+                        "Product updated",
                         response
                 )
         );
     }
 
+
     @PreAuthorize("hasRole('ADMIN')")
     @SecurityRequirement(name = "Cookie-based Authentication")
     @Operation(
-            summary = "Delete category",
-            description = "Deletes category by ID"
+            summary = "Delete product",
+            description = "Deletes product by ID"
     )
     @DeleteMapping("/{id}")
-    public ResponseEntity<BaseResponse<Void>> deleteCategory(
-            @PathVariable Long id
-    ) {
-        log.info("Request to delete category id={}", id);
-        categoryService.deleteCategory(id);
+    public ResponseEntity<BaseResponse<Void>> deleteProduct(
+            @PathVariable Long id) {
+        log.info("Request to delete product id={}", id);
+
+        productService.deleteProduct(id);
+
         return ResponseEntity.ok(
                 BaseResponseFactory.success(
-                        HttpStatus.NOT_FOUND,
-                        "Category deleted successfully"
+                        HttpStatus.OK,
+                        "Product deleted successfully"
                 )
         );
     }
