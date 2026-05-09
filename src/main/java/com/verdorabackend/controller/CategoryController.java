@@ -11,12 +11,14 @@ import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -28,6 +30,8 @@ public class CategoryController {
 
     private final CategoryService categoryService;
 
+    @PreAuthorize("hasRole('ADMIN')")
+    @SecurityRequirement(name = "Cookie-based Authentication")
     @Operation(
             summary = "Create category",
             description = "Creates a new product category"
@@ -70,6 +74,8 @@ public class CategoryController {
         );
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
+    @SecurityRequirement(name = "Cookie-based Authentication")
     @Operation(
             summary = "Update category",
             description = "Updates existing category by ID"
@@ -89,6 +95,8 @@ public class CategoryController {
         );
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
+    @SecurityRequirement(name = "Cookie-based Authentication")
     @Operation(
             summary = "Delete category",
             description = "Deletes category by ID"

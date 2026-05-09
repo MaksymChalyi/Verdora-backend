@@ -4,6 +4,7 @@ import com.verdorabackend.dto.request.ProductRequest;
 import com.verdorabackend.dto.response.ProductResponse;
 import com.verdorabackend.entity.Category;
 import com.verdorabackend.entity.Product;
+import com.verdorabackend.exception.CategoryNotFoundException;
 import com.verdorabackend.exception.ProductNotFoundException;
 import com.verdorabackend.mapper.ProductMapper;
 import com.verdorabackend.repository.CategoryRepository;
@@ -30,7 +31,7 @@ public class ProductServiceImpl implements ProductService {
         log.debug("Creating product with name: {}", productRequest.name());
 
         Category category = categoryRepository.findById(productRequest.categoryId())
-                .orElseThrow(() -> new RuntimeException("Category not found with id: " + productRequest.categoryId()));
+                .orElseThrow(() -> new CategoryNotFoundException(productRequest.categoryId()));
 
         Product product = productMapper.toEntity(productRequest);
         product.setCategory(category);
@@ -47,7 +48,7 @@ public class ProductServiceImpl implements ProductService {
         Product product = getByIdOrThrow(productId);
         productMapper.updateProductFromRequest(productRequest, product);
         Category category = categoryRepository.findById(productRequest.categoryId())
-                .orElseThrow(() -> new RuntimeException("Category not found with id: " + productRequest.categoryId()));
+                .orElseThrow(() -> new CategoryNotFoundException(productRequest.categoryId()));
         product.setCategory(category);
         Product updatedProduct = productRepository.save(product);
         log.info("Product updated with id: {}", updatedProduct.getId());
