@@ -3,7 +3,6 @@ package com.verdorabackend.service.impl;
 import com.verdorabackend.dto.auth.AuthResult;
 import com.verdorabackend.dto.request.SignInRequest;
 import com.verdorabackend.dto.request.SignUpRequest;
-import com.verdorabackend.dto.response.SignupResponse;
 import com.verdorabackend.entity.Role;
 import com.verdorabackend.entity.User;
 import com.verdorabackend.exception.InvalidCredentialsException;
@@ -39,8 +38,7 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional
-    public SignupResponse signup(SignUpRequest request) {
-        log.debug("Attempting to sign up user with email: {}", request.email());
+    public AuthResult signup(SignUpRequest request) {
         if (userRepository.existsByEmail(request.email())) {
             log.warn("Signup failed: email already exists, email={}", request.email());
             throw new UserAlreadyExistsException();
@@ -50,8 +48,10 @@ public class AuthServiceImpl implements AuthService {
         user.setRole(Role.USER);
         userRepository.save(user);
         log.info("User registered successfully: email={}, id={}", user.getEmail(), user.getId());
-
-        return new SignupResponse(user.getEmail());
+        UserPrincipal principal = new UserPrincipal(user);
+        String accessToken = jwtService.generateAccessToken(principal);
+        String refreshToken = jwtService.generateRefreshToken(principal);
+        return new AuthResult(user.getEmail(), accessToken, refreshToken);
     }
 
     @Override
@@ -89,11 +89,31 @@ public class AuthServiceImpl implements AuthService {
         String email = jwtService.extractUsername(refreshToken);
         UserDetails userDetails = userDetailsService.loadUserByUsername(email);
 
-        if (!jwtService.isTokenValid(refreshToken, userDetails)) {
+        if (!jwtService.isRefreshTokenValid(refreshToken, userDetails)) {
             throw new InvalidTokenException();
         }
 
         return jwtService.generateAccessToken(userDetails);
     }
 
+    @Override
+    @Transactional
+    public AuthResult loginOrRegisterGoogleUser(String email, String name) {
+        User user = userRepository.findUserByEmail(email)
+                .orElseGet(() -> {
+                    User newUser = new User();
+                    newUser.setEmail(email);
+                    newUser.setName(name);
+                    newUser.setRole(Role.USER);
+                    newUser.setPasswordHash("GOOGLE_OAUTH2_USER");
+                    return userRepository.save(newUser);
+                });
+
+        UserPrincipal principal = new UserPrincipal(user);
+
+        String accessToken = jwtService.generateAccessToken(principal);
+        String refreshToken = jwtService.generateRefreshToken(principal);
+
+        return new AuthResult(user.getEmail(), accessToken, refreshToken);
+    }
 }

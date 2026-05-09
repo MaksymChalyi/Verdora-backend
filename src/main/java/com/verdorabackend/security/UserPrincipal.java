@@ -1,13 +1,12 @@
 package com.verdorabackend.security;
 
 import com.verdorabackend.entity.User;
+import java.util.Collection;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
-
-import java.util.Collection;
-import java.util.List;
 
 @RequiredArgsConstructor
 public class UserPrincipal implements UserDetails {

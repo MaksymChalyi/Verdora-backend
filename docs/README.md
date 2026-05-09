@@ -1,228 +1,214 @@
 # Verdora Backend
 
-Backend service built with Spring Boot. Provides authentication, user management, and unified API responses.
+Backend service for the Verdora e-commerce platform, built with Spring Boot. Handles authentication (email/password and Google OAuth2), user management, and product categories.
 
 ---
 
-## 1. Overview
+## Tech Stack
 
-- Cookie-based authentication
-- Unified API response format
-- RESTful endpoints
-- Swagger documentation
-
----
-
-## 2. Tech Stack
-
-- Java 21
-- Spring Boot 3
-- Spring Security
-- Spring Data JPA
-- PostgreSQL
-- Flyway
-- Swagger (springdoc)
+| Technology | Purpose |
+|---|---|
+| Java 21 | Language |
+| Spring Boot 3 | Framework |
+| Spring Security | Authentication & authorization |
+| Spring Data JPA | Database access |
+| PostgreSQL | Database |
+| Flyway | Database migrations |
+| MapStruct | DTO mapping |
+| springdoc (Swagger) | API documentation |
+| Lombok | Boilerplate reduction |
 
 ---
 
-## 3. API Contract
+## Getting Started
 
-### 3.1 Response Format
-
-All endpoints return:
-
-```
-{
-"timestamp": "2026-04-21T13:55:49.772Z",
-"status": 200,
-"message": "Success",
-"data": {}
-}
-```
-### 3.2 Error Format
-```
-{
-"timestamp": "2026-04-21T13:55:49.773Z",
-"status": 400,
-"message": "Error message",
-"data": null
-}
-```
----
-
-## 4. Authentication
-
-### Flow
-
-1. Login → sets cookies:
-    - accessToken
-    - refreshToken
-
-2. Requests → use cookies automatically
-
-3. Refresh → generates new accessToken
-
-4. Logout → clears cookies
-
----
-
-## 5. Endpoints
-
-### 5.1 Auth
-
-| Method | Endpoint        | Description        |
-|--------|----------------|--------------------|
-| POST   | /auth/register | Register user      |
-| POST   | /auth/login    | Login              |
-| POST   | /auth/refresh  | Refresh token      |
-| POST   | /auth/logout   | Logout             |
-
----
-
-### 5.2 User
-
-| Method | Endpoint              | Description              |
-|--------|----------------------|--------------------------|
-| GET    | /users/current-user  | Get current user email   |
-
----
-
-### 5.3 Health
-
-| Method | Endpoint        | Description              |
-|--------|----------------|--------------------------|
-| GET    | /health/ping   | Service availability     |
-
----
-
-## 6. Validation
-
-Used annotations:
-
-- @Valid
-- @Email
-- @NotBlank
-
----
-
-## 7. Error Handling
-
-Centralized via:
-
-- GlobalExceptionHandler
-- BaseException
-- Spring Security exceptions
-
----
-
-## 8. Swagger
-
-- UI: http://localhost:8081/swagger-ui/index.html
-- OpenAPI: /v3/api-docs
-
----
-
-## 9. Database
-
-- PostgreSQL
-- Flyway migrations
-
----
-
-## 10. Run Application
-
-### 10.1 Prerequisites
+### Prerequisites
 
 - Java 21
 - Maven
 - PostgreSQL
 
----
+### 1. Create the database
 
-### 10.2 Database Setup
-
-Create database:
-
-CREATE DATABASE verdora;
-
----
-
-### 10.3 Configuration
-
-Configure datasource in application.yml:
+```sql
+CREATE DATABASE verdora_db;
 ```
-spring:
-datasource:
-url: jdbc:postgresql://localhost:5432/verdora
-username: postgres
-password: postgres
 
-jpa:
-hibernate:
-ddl-auto: validate
+### 2. Configure environment
 
-flyway:
-enabled: true
-```
----
+Copy `.env.example` to `.env` and fill in your values:
 
-### 10.4 Run Application
+```bash
+cp .env.example .env
 ```
-mvn clean install  
+
+```env
+SERVER_PORT=8081
+
+DB_DRIVER=org.postgresql.Driver
+DB_URL=jdbc:postgresql://localhost:5432/verdora_db
+DB_USERNAME=postgres
+DB_PASSWORD=your_password
+
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+REDIRECT_URL=http://localhost:5173
+
+JWT_SECRET=your_jwt_secret
 ```
-```
-mvn spring-boot:run
-```
-or
-```
+
+### 3. Run
+
+```bash
 ./mvnw spring-boot:run
 ```
----
 
-### 10.5 Access
+### 4. Verify
 
-- API: http://localhost:8081
-- Swagger UI: http://localhost:8081/swagger-ui/index.html
-
----
-
-### 10.6 Health Check
-
-GET /health/ping
-
-Expected:
 ```
+GET /health/ping
+```
+
+Expected response:
+```json
 {
-"status": 200,
-"message": "Service is alive",
-"data": "pong"
+  "status": 200,
+  "message": "Service is alive",
+  "data": "pong"
 }
 ```
+
 ---
 
-## 11. Project Structure
+## API
+
+### Base URL
+
 ```
-controller/
-service/
-repository/
-dto/
-exception/
-security/
+http://localhost:8081
 ```
+
+### Response format
+
+All endpoints return a unified wrapper:
+
+```json
+{
+  "timestamp": "2026-04-21T13:55:49.772Z",
+  "status": 200,
+  "message": "Success",
+  "data": {}
+}
+```
+
+On error:
+
+```json
+{
+  "timestamp": "2026-04-21T13:55:49.773Z",
+  "status": 400,
+  "message": "Error message",
+  "data": null
+}
+```
+
+### Endpoints
+
+#### Auth
+
+| Method | Endpoint | Auth required | Description |
+|---|---|---|---|
+| POST | `/auth/register` | ❌ | Register a new user |
+| POST | `/auth/login` | ❌ | Login with email and password |
+| POST | `/auth/refresh` | ❌ (cookie) | Refresh access token |
+| POST | `/auth/logout` | ❌ | Clear auth cookies |
+
+#### Users
+
+| Method | Endpoint | Auth required | Description |
+|---|---|---|---|
+| GET | `/users/current-user` | ✅ | Get current authenticated user email |
+
+#### [Categories](./categories/categories.md)
+
+| Method | Endpoint | Auth required | Description |
+|---|---|---|---|
+| POST | `/categories` | ❌ | Create a category |
+| PUT | `/categories/{id}` | ❌ | Update a category |
+| DELETE | `/categories/{id}` | ❌ | Delete a category |
+
+#### Health
+
+| Method | Endpoint | Auth required | Description |
+|---|---|---|---|
+| GET | `/health/ping` | ❌ | Service availability check |
+
 ---
 
-## 12. Future Improvements
+## Authentication
 
-- Add DTO for current user (id, role)
-- Replace Principal with custom UserDetails
-- Add refresh token rotation
-- Add role-based access control
-- Add integration tests
+Cookie-based authentication using JWT. After login or registration two `HttpOnly` cookies are set:
+
+| Cookie | Path | Expiration |
+|---|---|---|
+| `accessToken` | `/` | 15 minutes |
+| `refreshToken` | `/auth/refresh` | 7 days |
+
+Cookies are sent automatically by the browser on every request. `HttpOnly` prevents JavaScript from reading them (XSS protection).
+
+When `accessToken` expires — call `POST /auth/refresh`. The `refreshToken` cookie is sent automatically and a new `accessToken` is issued.
 
 ---
 
-## 13. Notes
+## Project Structure
 
-- Uses cookies instead of Bearer tokens
-- All responses wrapped in BaseResponse
-- Swagger examples defined manually
+```
+src/main/java/com/verdorabackend/
+├── controller/       # REST endpoints
+├── service/          # Business logic
+│   └── impl/
+├── repository/       # JPA repositories
+├── entity/           # JPA entities
+├── dto/
+│   ├── request/      # Incoming payloads
+│   ├── response/     # Outgoing payloads
+│   └── auth/         # Internal auth results
+├── security/         # JWT, OAuth2, filters, cookies
+├── exception/        # Custom exceptions
+│   └── handler/      # GlobalExceptionHandler
+├── mapper/           # MapStruct mappers
+└── config/           # OpenAPI config
+```
+
+---
+
+## Database
+
+Migrations are managed by Flyway and run automatically on startup.
+
+```
+resources/db/migration/
+├── V1__create_categories_table.sql
+├── V2__create_products_table.sql
+├── V3__create_users_table.sql
+├── V4__create_carts_table.sql
+├── V5__create_cart_items_table.sql
+├── V6__create_orders_table.sql
+├── V7__create_order_items_table.sql
+└── V8__create_favorites_table.sql
+```
+
+---
+
+## Swagger
+
+- UI: [http://localhost:8081/swagger-ui/index.html](http://localhost:8081/swagger-ui/index.html)
+- OpenAPI spec: [http://localhost:8081/v3/api-docs](http://localhost:8081/v3/api-docs)
+
+---
+
+## Documentation
+
+- [Sign In](./auth/sign-in.md)
+- [Sign Up](./auth/sign-up.md)
+- [Google OAuth](./auth/google-oauth.md)

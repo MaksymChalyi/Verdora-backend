@@ -23,57 +23,64 @@
 
     <dependencies>
 
-        <!-- Web -->
+        <!-- Web: embedded Tomcat + Spring MVC, needed for REST controllers -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
 
-        <!-- Security -->
+        <!-- Security: Spring Security — JWT filter, OAuth2, password encoding -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security</artifactId>
         </dependency>
 
-        <!-- JPA -->
+        <!-- JPA: Hibernate + Spring Data repositories -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-jpa</artifactId>
         </dependency>
 
-        <!-- Validation -->
+        <!-- Validation: @Valid, @Email, @NotBlank, @Size on DTOs -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
 
-        <!-- Flyway (правильний) -->
+        <!-- Flyway core: database migration engine -->
         <dependency>
             <groupId>org.flywaydb</groupId>
             <artifactId>flyway-core</artifactId>
         </dependency>
 
-        <!-- DB -->
+        <!-- Flyway PostgreSQL dialect — required separately since Flyway 10 -->
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-database-postgresql</artifactId>
+        </dependency>
+
+        <!-- PostgreSQL JDBC driver, runtime only — not needed at compile time -->
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
             <scope>runtime</scope>
         </dependency>
 
-        <!-- Swagger -->
+        <!-- Swagger UI + OpenAPI 3 spec, available at /swagger-ui/index.html -->
         <dependency>
             <groupId>org.springdoc</groupId>
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
             <version>2.3.0</version>
         </dependency>
 
-        <!-- MapStruct -->
+        <!-- MapStruct: compile-time DTO <-> entity mapping (no reflection) -->
         <dependency>
             <groupId>org.mapstruct</groupId>
             <artifactId>mapstruct</artifactId>
             <version>1.6.3</version>
         </dependency>
 
+        <!-- MapStruct annotation processor: generates mapper implementations at compile time -->
         <dependency>
             <groupId>org.mapstruct</groupId>
             <artifactId>mapstruct-processor</artifactId>
@@ -81,7 +88,12 @@
             <scope>provided</scope>
         </dependency>
 
-        <!-- JWT (вирівняні версії) -->
+        <!--
+            JWT (jjwt 0.11.5) — split into 3 artifacts:
+            - jjwt-api: compile-time API (Jwts, Claims, etc.)
+            - jjwt-impl: runtime implementation — never needed at compile time
+            - jjwt-jackson: JSON serialization for JWT payload via Jackson
+        -->
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-api</artifactId>
@@ -102,7 +114,26 @@
             <scope>runtime</scope>
         </dependency>
 
-        <!-- Dev -->
+        <!-- OAuth2 Client: Google login via Spring Security OAuth2 -->
+        <!--
+            NOTE: version 2.3.3.RELEASE is from the old Spring Boot 2.x line.
+            With Spring Boot 3.3.5 the correct artifact is managed by the parent BOM
+            and the version tag should be removed entirely.
+        -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-oauth2-client</artifactId>
+            <version>2.3.3.RELEASE</version>
+        </dependency>
+
+        <!-- spring-dotenv: loads .env file into Spring Environment so ${VAR} works -->
+        <dependency>
+            <groupId>me.paulschwarz</groupId>
+            <artifactId>spring-dotenv</artifactId>
+            <version>4.0.0</version>
+        </dependency>
+
+        <!-- DevTools: hot reload on classpath changes, disabled in production automatically -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-devtools</artifactId>
@@ -110,37 +141,41 @@
             <optional>true</optional>
         </dependency>
 
-        <!-- Lombok -->
+        <!-- Lombok: generates boilerplate (@Getter, @Setter, @RequiredArgsConstructor, etc.) -->
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <optional>true</optional>
         </dependency>
 
+        <!--
+            lombok-mapstruct-binding: ensures Lombok runs before MapStruct
+            during annotation processing — without this, MapStruct can't see
+            Lombok-generated constructors and fails to generate mappers
+        -->
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok-mapstruct-binding</artifactId>
             <version>0.2.0</version>
         </dependency>
 
-        <dependency>
-            <groupId>org.flywaydb</groupId>
-            <artifactId>flyway-database-postgresql</artifactId>
-        </dependency>
-
+        <!-- Test: JUnit 5 + Mockito + Spring test context -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
+
     </dependencies>
 
     <build>
         <plugins>
+            <!-- Spring Boot plugin: packages the app as an executable JAR -->
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
+                    <!-- Lombok is compile-only — exclude it from the final JAR -->
                     <excludes>
                         <exclude>
                             <groupId>org.projectlombok</groupId>
@@ -149,6 +184,13 @@
                     </excludes>
                 </configuration>
             </plugin>
+
+            <!--
+                Compiler plugin: annotation processors must be listed explicitly
+                so Maven runs them in the right order.
+                Lombok must come before MapStruct — otherwise MapStruct
+                sees the original class without Lombok-generated methods.
+            -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
@@ -194,6 +236,35 @@
                         </configuration>
                     </execution>
                 </executions>
+            </plugin>
+            <!--
+    Spotless: enforces consistent code formatting.
+    mvn spotless:apply  — auto-formats all Java files
+    mvn spotless:check  — fails the build if any file is not formatted (good for CI)
+-->
+            <plugin>
+                <groupId>com.diffplug.spotless</groupId>
+                <artifactId>spotless-maven-plugin</artifactId>
+                <version>2.43.0</version>
+                <configuration>
+                    <java>
+
+                        <!-- Remove unused imports -->
+                        <removeUnusedImports/>
+
+                        <!-- Trim trailing whitespace on every line -->
+                        <trimTrailingWhitespace/>
+
+                        <!-- Ensure every file ends with a newline -->
+                        <endWithNewline/>
+
+                        <!-- Files to format -->
+                        <includes>
+                            <include>src/main/java/**/*.java</include>
+                            <include>src/test/java/**/*.java</include>
+                        </includes>
+                    </java>
+                </configuration>
             </plugin>
         </plugins>
     </build>

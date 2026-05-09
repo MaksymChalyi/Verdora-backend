@@ -10,6 +10,7 @@ import com.verdorabackend.dto.response.SignupResponse;
 import com.verdorabackend.security.CookieService;
 import com.verdorabackend.service.AuthService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.headers.Header;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -38,12 +39,15 @@ public class AuthController {
 
     @Operation(
             summary = "User registration",
-            description = "Registers a new user"
+            description = "Registers a new user and authenticates them by setting accessToken and refreshToken cookies"
     )
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "201",
-                    description = "User created",
+                    description = "User created and authenticated (cookies are set)",
+                    headers = {
+                            @Header(name = "Set-Cookie", description = "accessToken and refreshToken cookies")
+                    },
                     content = @Content(
                             mediaType = "application/json",
                             schema = @Schema(implementation = BaseResponse.class),
@@ -77,13 +81,15 @@ public class AuthController {
             )
     })
     @PostMapping("/register")
-    public ResponseEntity<BaseResponse<SignupResponse>> signup(@Valid @RequestBody SignUpRequest request) {
-        SignupResponse response = authService.signup(request);
+    public ResponseEntity<BaseResponse<SignupResponse>> signup(@Valid @RequestBody SignUpRequest request, HttpServletResponse response) {
+        AuthResult result = authService.signup(request);
+        cookieService.addAccessToken(response, result.accessToken());
+        cookieService.addRefreshToken(response, result.refreshToken());
         return ResponseEntity.status(HttpStatus.CREATED).body(
                 BaseResponseFactory.success(
                         HttpStatus.CREATED,
                         "User created",
-                        response
+                        new SignupResponse(result.email())
                 )
         );
     }
