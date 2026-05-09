@@ -31,6 +31,7 @@ public class SecurityConfig {
                                                 "/swagger-ui/**",
                                                 "/swagger-ui.html",
                                                 "/categories/**",
+                                                "/products/**",
                                                 "/oauth2/**",
                                                 "/login/oauth2/**")
                                         .permitAll()
