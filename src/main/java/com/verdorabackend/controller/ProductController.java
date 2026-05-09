@@ -4,7 +4,7 @@ import com.verdorabackend.dto.request.ProductRequest;
 import com.verdorabackend.dto.response.BaseResponse;
 import com.verdorabackend.dto.response.BaseResponseFactory;
 import com.verdorabackend.dto.response.ProductResponse;
-import com.verdorabackend.service.impl.ProductServiceImpl;
+import com.verdorabackend.service.ProductService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
@@ -26,7 +26,7 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/products")
 public class ProductController {
 
-    private final ProductServiceImpl productService;
+    private final ProductService productService;
 
     @Operation(
             summary = "Create product",
@@ -56,8 +56,7 @@ public class ProductController {
     })
     @PostMapping
     public ResponseEntity<BaseResponse<ProductResponse>> createProduct(
-            @RequestBody @Valid ProductRequest request
-    ) {
+            @RequestBody @Valid ProductRequest request) {
         log.info("Request to create product: {}", request.name());
 
         ProductResponse response = productService.createProduct(request);
@@ -78,8 +77,7 @@ public class ProductController {
     @PutMapping("/{id}")
     public ResponseEntity<BaseResponse<ProductResponse>> updateProduct(
             @PathVariable Long id,
-            @RequestBody @Valid ProductRequest request
-    ) {
+            @RequestBody @Valid ProductRequest request) {
         log.info("Request to update product id={}", id);
 
         ProductResponse response = productService.updateProduct(id, request);
@@ -99,8 +97,7 @@ public class ProductController {
     )
     @DeleteMapping("/{id}")
     public ResponseEntity<BaseResponse<Void>> deleteProduct(
-            @PathVariable Long id
-    ) {
+            @PathVariable Long id) {
         log.info("Request to delete product id={}", id);
 
         productService.deleteProduct(id);

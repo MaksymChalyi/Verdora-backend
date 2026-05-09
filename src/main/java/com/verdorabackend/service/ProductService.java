@@ -1,4 +1,4 @@
-package com.verdorabackend.service.impl;
+package com.verdorabackend.service;
 
 import com.verdorabackend.dto.request.ProductRequest;
 import com.verdorabackend.dto.response.ProductResponse;
