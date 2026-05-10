@@ -3,17 +3,17 @@ package com.verdorabackend.service.impl;
 import com.verdorabackend.dto.auth.AuthResult;
 import com.verdorabackend.dto.request.SignInRequest;
 import com.verdorabackend.dto.request.SignUpRequest;
+import com.verdorabackend.entity.PasswordResetToken;
 import com.verdorabackend.entity.Role;
 import com.verdorabackend.entity.User;
-import com.verdorabackend.exception.InvalidCredentialsException;
-import com.verdorabackend.exception.InvalidTokenException;
-import com.verdorabackend.exception.UserAlreadyExistsException;
-import com.verdorabackend.exception.WrongTokenTypeException;
+import com.verdorabackend.exception.*;
 import com.verdorabackend.mapper.UserMapper;
+import com.verdorabackend.repository.PasswordResetTokenRepository;
 import com.verdorabackend.repository.UserRepository;
 import com.verdorabackend.security.JwtService;
 import com.verdorabackend.security.UserPrincipal;
 import com.verdorabackend.service.AuthService;
+import com.verdorabackend.service.EmailService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -23,6 +23,9 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -35,6 +38,8 @@ public class AuthServiceImpl implements AuthService {
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
     private final UserDetailsService userDetailsService;
+    private final PasswordResetTokenRepository passwordResetTokenRepository;
+    private final EmailService emailService;
 
     @Override
     @Transactional
@@ -117,4 +122,48 @@ public class AuthServiceImpl implements AuthService {
 
         return new AuthResult(user.getEmail(), accessToken, refreshToken);
     }
+
+    @Override
+    @Transactional
+    public void forgotPassword(String email) {
+        User user = userRepository.findUserByEmail(email).orElseThrow(UserNotFoundException::new);
+        passwordResetTokenRepository.deleteAllByUserId(user.getId());
+        String token = UUID.randomUUID().toString();
+
+        PasswordResetToken resetToken = PasswordResetToken.builder()
+                .token(token)
+                .user(user)
+                .expiresAt(LocalDateTime.now().plusMinutes(15))
+                .used(false)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        passwordResetTokenRepository.save(resetToken);
+        emailService.sendPasswordResetEmail(email, token);
+
+        log.info("Password reset requested for email: {}", email);
+    }
+
+    @Override
+    @Transactional
+    public void resetPassword(String token, String newPassword) {
+        PasswordResetToken resetToken = passwordResetTokenRepository.findByToken(token).orElseThrow(InvalidResetTokenException::new);
+        if (resetToken.isUsed()) {
+            throw new ResetTokenAlreadyUsedException();
+        }
+
+        if (resetToken.getExpiresAt().isBefore(LocalDateTime.now())) {
+            throw new ResetTokenExpiredException();
+        }
+
+        User user = resetToken.getUser();
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+
+        resetToken.setUsed(true);
+        passwordResetTokenRepository.save(resetToken);
+
+        log.info("Password reset successful for userId: {}", user.getId());
+    }
+
 }

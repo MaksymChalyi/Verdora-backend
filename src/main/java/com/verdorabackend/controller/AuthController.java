@@ -1,6 +1,8 @@
 package com.verdorabackend.controller;
 
 import com.verdorabackend.dto.auth.AuthResult;
+import com.verdorabackend.dto.request.ForgotPasswordRequest;
+import com.verdorabackend.dto.request.ResetPasswordRequest;
 import com.verdorabackend.dto.request.SignInRequest;
 import com.verdorabackend.dto.request.SignUpRequest;
 import com.verdorabackend.dto.response.BaseResponse;
@@ -21,6 +23,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -29,6 +32,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@Slf4j
 @RequiredArgsConstructor
 @Tag(name = "Authentication", description = "Endpoints for authentication")
 @RequestMapping("/auth")
@@ -221,6 +225,108 @@ public class AuthController {
         cookieService.clearAuthCookies(response);
         return ResponseEntity.ok(
                 BaseResponseFactory.success(HttpStatus.OK, "Successfully logged out")
+        );
+    }
+
+    @Operation(
+            summary = "Forgot password",
+            description = "Sends password reset email to the user"
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Reset email sent",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = BaseResponse.class),
+                            examples = @ExampleObject(value = """
+                                    {
+                                      "timestamp": "2026-05-09T13:55:49.772Z",
+                                      "status": 200,
+                                      "message": "Password reset email sent",
+                                      "data": null
+                                    }
+                                    """)
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "User not found",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = BaseResponse.class),
+                            examples = @ExampleObject(value = """
+                                    {
+                                      "timestamp": "2026-05-09T13:55:49.773Z",
+                                      "status": 404,
+                                      "message": "User not found",
+                                      "data": null
+                                    }
+                                    """)
+                    )
+            )
+    })
+    @PostMapping("/forgot-password")
+    public ResponseEntity<BaseResponse<Void>> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        log.info("Forgot password request for email: {}", request.email());
+        authService.forgotPassword(request.email());
+
+        return ResponseEntity.ok(
+                BaseResponseFactory.success(
+                        HttpStatus.OK,
+                        "Password reset email sent"
+                )
+        );
+    }
+
+    @Operation(
+            summary = "Reset password",
+            description = "Resets user password using a valid reset token"
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Password reset successfully",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = BaseResponse.class),
+                            examples = @ExampleObject(value = """
+                                    {
+                                      "timestamp": "2026-05-09T13:55:49.772Z",
+                                      "status": 200,
+                                      "message": "Password reset successfully",
+                                      "data": null
+                                    }
+                                    """)
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Invalid or expired token",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = BaseResponse.class),
+                            examples = @ExampleObject(value = """
+                                    {
+                                      "timestamp": "2026-05-09T13:55:49.773Z",
+                                      "status": 400,
+                                      "message": "Reset token expired",
+                                      "data": null
+                                    }
+                                    """)
+                    )
+            )
+    })
+    @PostMapping("/reset-password")
+    public ResponseEntity<BaseResponse<Void>> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        log.info("Reset password request with token: {}", request.token());
+        authService.resetPassword(request.token(), request.newPassword());
+
+        return ResponseEntity.ok(
+                BaseResponseFactory.success(
+                        HttpStatus.OK,
+                        "Password reset successfully"
+                )
         );
     }
 }
