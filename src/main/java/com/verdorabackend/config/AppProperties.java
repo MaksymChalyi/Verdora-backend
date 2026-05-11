@@ -14,4 +14,5 @@ public class AppProperties {
     private String frontendUrl;
     private String mailFrom;
     private List<String> allowedOrigins;
+    private String sendgridApiKey;
 }
