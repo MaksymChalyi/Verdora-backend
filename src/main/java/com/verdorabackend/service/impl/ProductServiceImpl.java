@@ -9,11 +9,19 @@ import com.verdorabackend.exception.ProductNotFoundException;
 import com.verdorabackend.mapper.ProductMapper;
 import com.verdorabackend.repository.CategoryRepository;
 import com.verdorabackend.repository.ProductRepository;
+import com.verdorabackend.repository.ProductSpecification;
+import com.verdorabackend.repository.UserRepository;
 import com.verdorabackend.service.ProductService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+
 
 @Service
 @RequiredArgsConstructor
@@ -23,6 +31,7 @@ public class ProductServiceImpl implements ProductService {
     private final ProductRepository productRepository;
     private final ProductMapper productMapper;
     private final CategoryRepository categoryRepository;
+    private final UserRepository userRepository;
 
     @Override
     @Transactional
@@ -64,8 +73,30 @@ public class ProductServiceImpl implements ProductService {
         log.info("Product deleted, id={}", productId);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public Page<ProductResponse> getProducts(
+            Long categoryId,
+            BigDecimal minPrice,
+            BigDecimal maxPrice,
+            Boolean discount,
+            Pageable pageable
+    ) {
+        log.debug("Fetching products: categoryId={}, minPrice={}, maxPrice={}, discount={}",
+                categoryId, minPrice, maxPrice, discount);
+
+        Specification<Product> spec = ProductSpecification.filter(
+                categoryId, minPrice, maxPrice, discount);
+
+        return productRepository.findAll(spec, pageable)
+                .map(productMapper::toResponse);
+    }
+
+
     private Product getByIdOrThrow(Long id) {
         return productRepository.findById(id)
                 .orElseThrow(() -> new ProductNotFoundException(id));
     }
+
+
 }

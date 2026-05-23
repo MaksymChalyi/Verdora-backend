@@ -6,6 +6,7 @@ import com.verdorabackend.dto.response.BaseResponseFactory;
 import com.verdorabackend.dto.response.ProductResponse;
 import com.verdorabackend.service.ProductService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -16,10 +17,15 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
+import java.math.BigDecimal;
 
 @RestController
 @RequiredArgsConstructor
@@ -116,6 +122,40 @@ public class ProductController {
                         HttpStatus.OK,
                         "Product deleted successfully"
                 )
+        );
+    }
+
+    @Operation(
+            summary = "Get products",
+            description = "Returns paginated list of products with optional filters"
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Products returned")
+    })
+    @GetMapping
+    public ResponseEntity<BaseResponse<Page<ProductResponse>>> getProducts(
+            @Parameter(description = "Filter by category ID")
+            @RequestParam(required = false) Long categoryId,
+
+            @Parameter(description = "Minimum price")
+            @RequestParam(required = false) BigDecimal minPrice,
+
+            @Parameter(description = "Maximum price")
+            @RequestParam(required = false) BigDecimal maxPrice,
+
+            @Parameter(description = "Only products with discount (discountPrice < price)")
+            @RequestParam(required = false) Boolean discount,
+
+            @PageableDefault(size = 20, sort = "id") Pageable pageable
+    ) {
+        log.info("Request to get products: categoryId={}, minPrice={}, maxPrice={}, discount={}",
+                categoryId, minPrice, maxPrice, discount);
+
+        Page<ProductResponse> response = productService.getProducts(
+                categoryId, minPrice, maxPrice, discount, pageable);
+
+        return ResponseEntity.ok(
+                BaseResponseFactory.success(HttpStatus.OK, "Products fetched successfully", response)
         );
     }
 }
