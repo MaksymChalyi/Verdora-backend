@@ -30,6 +30,7 @@ app:
   allowed-origins:
     - ${ALLOWED_ORIGIN_1:http://localhost:5173}
     - ${ALLOWED_ORIGIN_2:http://localhost:8081}
+    - ${ALLOWED_ORIGIN_3:}
   sendgrid-api-key: ${SENDGRID_API_KEY}
   oauth2:
     redirect-uri: ${REDIRECT_URL:http://localhost:5173}

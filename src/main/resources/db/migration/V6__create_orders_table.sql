@@ -1,37 +1,32 @@
--- Таблиця елементів кошика
--- Кожен рядок = товар у конкретному кошику
+-- Таблиця замовлень
+-- Кожен запис = одне оформлене замовлення
 
-CREATE TABLE cart_items
+CREATE TABLE orders
 (
     -- Унікальний ідентифікатор
-    cart_item_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    order_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
 
-    -- Посилання на кошик
-    cart_id      BIGINT NOT NULL,
+    -- Користувач, який зробив замовлення
+    user_id INT NOT NULL,
 
-    -- Посилання на товар
-    product_id   BIGINT NOT NULL,
+    -- Загальна сума замовлення
+    -- Фіксується на момент покупки
+    total_price DECIMAL(10, 2) NOT NULL,
 
-    -- Кількість товару
-    -- Не може бути 0 або від’ємною
-    quantity     BIGINT NOT NULL CHECK (quantity > 0),
+    -- Статус замовлення
+    -- Контроль значень через CHECK
+    status VARCHAR(32) NOT NULL
+        CHECK (status IN ('PENDING', 'PAID', 'SHIPPED', 'CANCELLED')),
 
-    -- Забороняє дублікати одного товару в одному кошику
-    CONSTRAINT uq_cart_product UNIQUE (cart_id, product_id),
+    -- Дата створення
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    -- FK на carts
-    CONSTRAINT fk_cart_items_cart
-        FOREIGN KEY (cart_id)
-            REFERENCES carts (cart_id)
-            ON DELETE CASCADE,
-
-    -- FK на products
-    CONSTRAINT fk_cart_items_product
-        FOREIGN KEY (product_id)
-            REFERENCES products (product_id)
+    -- FK на users
+    CONSTRAINT fk_orders_user
+        FOREIGN KEY (user_id)
+            REFERENCES users (user_id)
             ON DELETE RESTRICT
 );
 
--- Індекси для швидких JOIN
-CREATE INDEX idx_cart_items_cart_id ON cart_items (cart_id);
-CREATE INDEX idx_cart_items_product_id ON cart_items (product_id);
+-- Індекс для швидкого пошуку замовлень користувача
+CREATE INDEX idx_orders_user_id ON orders(user_id);
