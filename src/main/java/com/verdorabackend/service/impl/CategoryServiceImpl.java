@@ -12,6 +12,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -19,6 +21,23 @@ public class CategoryServiceImpl implements CategoryService {
 
     private final CategoryRepository categoryRepository;
     private final CategoryMapper categoryMapper;
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<CategoryResponse> getAllCategories() {
+        log.debug("Fetching all categories");
+        return categoryRepository.findAll()
+                .stream()
+                .map(categoryMapper::toResponse)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public CategoryResponse getCategory(Long id) {
+        log.debug("Fetching category id={}", id);
+        return categoryMapper.toResponse(getByIdOrThrow(id));
+    }
 
     @Override
     @Transactional

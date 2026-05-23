@@ -7,7 +7,6 @@ import org.springframework.data.domain.Pageable;
 
 import java.math.BigDecimal;
 
-
 public interface ProductService {
 
     ProductResponse createProduct(ProductRequest productRequest);
@@ -21,6 +20,9 @@ public interface ProductService {
             BigDecimal minPrice,
             BigDecimal maxPrice,
             Boolean discount,
+            String search,
             Pageable pageable
     );
+
+    ProductResponse getProduct(Long productId);
 }

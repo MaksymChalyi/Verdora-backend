@@ -42,6 +42,12 @@ public class FavoriteServiceImpl implements FavoriteService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public boolean isFavorite(Long userId, Long productId) {
+        return favoriteRepository.existsById(new FavoriteId(userId, productId));
+    }
+
+    @Override
     @Transactional
     public FavoriteResponse addFavorite(Long userId, Long productId) {
         log.debug("Adding productId={} to favorites for userId={}", productId, userId);
@@ -82,5 +88,4 @@ public class FavoriteServiceImpl implements FavoriteService {
         favoriteRepository.deleteById(favoriteId);
         log.info("Removed productId={} from favorites for userId={}", productId, userId);
     }
-
 }

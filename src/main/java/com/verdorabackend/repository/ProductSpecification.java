@@ -16,7 +16,8 @@ public class ProductSpecification {
             Long categoryId,
             BigDecimal minPrice,
             BigDecimal maxPrice,
-            Boolean discount
+            Boolean discount,
+            String search
     ) {
         return (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
@@ -35,6 +36,15 @@ public class ProductSpecification {
 
             if (Boolean.TRUE.equals(discount)) {
                 predicates.add(cb.lessThan(root.get("discountPrice"), root.get("price")));
+            }
+
+            // search — пошук по назві або опису (case-insensitive)
+            if (search != null && !search.isBlank()) {
+                String pattern = "%" + search.toLowerCase() + "%";
+                predicates.add(cb.or(
+                        cb.like(cb.lower(root.get("name")), pattern),
+                        cb.like(cb.lower(root.get("description")), pattern)
+                ));
             }
 
             return cb.and(predicates.toArray(new Predicate[0]));
