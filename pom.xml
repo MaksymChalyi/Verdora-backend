@@ -123,7 +123,6 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-oauth2-client</artifactId>
-            <version>2.3.3.RELEASE</version>
         </dependency>
 
         <!-- spring-dotenv: loads .env file into Spring Environment so ${VAR} works -->
@@ -164,6 +163,12 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.sendgrid</groupId>
+            <artifactId>sendgrid-java</artifactId>
+            <version>4.10.2</version>
         </dependency>
 
     </dependencies>

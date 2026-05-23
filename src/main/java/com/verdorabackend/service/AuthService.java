@@ -13,4 +13,8 @@ public interface AuthService {
     String refresh(String refreshToken);
 
     AuthResult loginOrRegisterGoogleUser(String email, String name);
+
+    void forgotPassword(String email);
+
+    void resetPassword(String token, String newPassword);
 }

@@ -1,6 +1,6 @@
 # Verdora Backend
 
-Backend service for the Verdora e-commerce platform, built with Spring Boot. Handles authentication (email/password and Google OAuth2), user management, and product categories.
+Backend service for the Verdora e-commerce platform, built with Spring Boot. Handles authentication (email/password and Google OAuth2), user management, product catalog, shopping cart, orders, and favorites.
 
 ---
 
@@ -17,6 +17,8 @@ Backend service for the Verdora e-commerce platform, built with Spring Boot. Han
 | MapStruct | DTO mapping |
 | springdoc (Swagger) | API documentation |
 | Lombok | Boilerplate reduction |
+| Docker | Containerization |
+| GitHub Actions | CI/CD |
 
 ---
 
@@ -55,6 +57,12 @@ GOOGLE_CLIENT_SECRET=your_google_client_secret
 REDIRECT_URL=http://localhost:5173
 
 JWT_SECRET=your_jwt_secret
+
+ALLOWED_ORIGIN_1=http://localhost:5173
+ALLOWED_ORIGIN_2=http://localhost:8081
+
+MAIL_FROM=your_email
+SENDGRID_API_KEY=your_sendgrid_key
 ```
 
 ### 3. Run
@@ -94,7 +102,7 @@ All endpoints return a unified wrapper:
 
 ```json
 {
-  "timestamp": "2026-04-21T13:55:49.772Z",
+  "timestamp": "2026-05-23T13:55:49.772Z",
   "status": 200,
   "message": "Success",
   "data": {}
@@ -105,7 +113,7 @@ On error:
 
 ```json
 {
-  "timestamp": "2026-04-21T13:55:49.773Z",
+  "timestamp": "2026-05-23T13:55:49.773Z",
   "status": 400,
   "message": "Error message",
   "data": null
@@ -116,30 +124,87 @@ On error:
 
 #### Auth
 
-| Method | Endpoint | Auth required | Description |
+| Method | Endpoint | Auth | Description |
 |---|---|---|---|
-| POST | `/auth/register` | ❌ | Register a new user |
-| POST | `/auth/login` | ❌ | Login with email and password |
+| POST | `/auth/sign-up` | ❌ | Register a new user |
+| POST | `/auth/sign-in` | ❌ | Login with email and password |
 | POST | `/auth/refresh` | ❌ (cookie) | Refresh access token |
-| POST | `/auth/logout` | ❌ | Clear auth cookies |
+| POST | `/auth/logout` | ✅ | Clear auth cookies |
+| POST | `/auth/forgot-password` | ❌ | Send password reset email |
+| POST | `/auth/reset-password` | ❌ | Reset password with token |
+| GET | `/oauth2/authorization/google` | ❌ | Google OAuth2 login |
 
 #### Users
 
-| Method | Endpoint | Auth required | Description |
+| Method | Endpoint | Auth | Description |
 |---|---|---|---|
-| GET | `/users/current-user` | ✅ | Get current authenticated user email |
+| GET | `/users/me` | ✅ | Get current user |
+| PUT | `/users/me` | ✅ | Update current user |
+| GET | `/users` | ✅ ADMIN | Get all users (paginated) |
+| DELETE | `/users/{id}` | ✅ ADMIN | Delete user |
 
-#### [Categories](./categories/categories.md)
+#### Products
 
-| Method | Endpoint | Auth required | Description |
+| Method | Endpoint | Auth | Description |
 |---|---|---|---|
-| POST | `/categories` | ❌ | Create a category |
-| PUT | `/categories/{id}` | ❌ | Update a category |
-| DELETE | `/categories/{id}` | ❌ | Delete a category |
+| GET | `/products` | ❌ | Get products (with filters) |
+| GET | `/products/{id}` | ❌ | Get product by ID |
+| POST | `/products` | ✅ ADMIN | Create product |
+| PUT | `/products/{id}` | ✅ ADMIN | Update product |
+| DELETE | `/products/{id}` | ✅ ADMIN | Delete product |
+
+**Filter params for `GET /products`:**
+
+| Param | Type | Description |
+|---|---|---|
+| `categoryId` | Long | Filter by category |
+| `minPrice` | BigDecimal | Minimum price |
+| `maxPrice` | BigDecimal | Maximum price |
+| `discount` | Boolean | Only discounted products |
+| `page`, `size`, `sort` | — | Pagination |
+
+#### Categories
+
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| GET | `/categories` | ❌ | Get all categories |
+| POST | `/categories` | ✅ ADMIN | Create category |
+| PUT | `/categories/{id}` | ✅ ADMIN | Update category |
+| DELETE | `/categories/{id}` | ✅ ADMIN | Delete category |
+
+#### Cart
+
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| GET | `/cart` | ✅ | Get current user's cart |
+| POST | `/cart/items` | ✅ | Add item to cart |
+| PUT | `/cart/items/{cartItemId}` | ✅ | Update item quantity |
+| DELETE | `/cart/items/{cartItemId}` | ✅ | Remove item from cart |
+| DELETE | `/cart` | ✅ | Clear cart |
+
+#### Orders
+
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| POST | `/orders` | ✅ | Place order from cart |
+| GET | `/orders` | ✅ | Get all user's orders |
+| GET | `/orders/{orderId}` | ✅ | Get order by ID |
+| DELETE | `/orders/{orderId}` | ✅ | Cancel order (PENDING only) |
+| PATCH | `/orders/{orderId}/status` | ✅ ADMIN | Update order status |
+
+**Order statuses:** `PENDING` → `PAID` → `SHIPPED` → `CANCELLED`
+
+#### Favorites
+
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| GET | `/favorites` | ✅ | Get favorite products |
+| POST | `/favorites/{productId}` | ✅ | Add to favorites |
+| DELETE | `/favorites/{productId}` | ✅ | Remove from favorites |
 
 #### Health
 
-| Method | Endpoint | Auth required | Description |
+| Method | Endpoint | Auth | Description |
 |---|---|---|---|
 | GET | `/health/ping` | ❌ | Service availability check |
 
@@ -177,7 +242,7 @@ src/main/java/com/verdorabackend/
 ├── exception/        # Custom exceptions
 │   └── handler/      # GlobalExceptionHandler
 ├── mapper/           # MapStruct mappers
-└── config/           # OpenAPI config
+└── config/           # OpenAPI, security beans, app properties
 ```
 
 ---
@@ -195,8 +260,14 @@ resources/db/migration/
 ├── V5__create_cart_items_table.sql
 ├── V6__create_orders_table.sql
 ├── V7__create_order_items_table.sql
-└── V8__create_favorites_table.sql
+├── V8__create_favorites_table.sql
+├── V9__insert_default_admin.sql
+└── V10__create_password_reset_tokens_table.sql
 ```
+
+Default admin credentials (from V9 migration):
+- **Email:** `admin@verdora.com`
+- **Password:** `password`
 
 ---
 
@@ -207,9 +278,25 @@ resources/db/migration/
 
 ---
 
+## Docker
+
+```bash
+docker-compose up -d
+```
+
+See [Docker docs](./docs/docker/docker.md) for details.
+
+---
+
 ## Documentation
 
 - [Sign In](./auth/sign-in.md)
 - [Sign Up](./auth/sign-up.md)
+- [JWT](./auth/jwt.md)
 - [Google OAuth](./auth/google-oauth.md)
+- [Password Reset](./auth/password_reset.md)
+- [Cart](./cart/cart.md)
+- [Orders](./orders/orders.md)
+- [Favorites](./favorites/favorites.md)
 - [Docker](./docker/docker.md)
+- [CI/CD](./ci-cd/github-ci.md)
