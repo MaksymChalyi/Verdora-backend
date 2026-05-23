@@ -43,6 +43,21 @@ public class FavoriteController {
         );
     }
 
+    @Operation(summary = "Check if product is in favorites", description = "Returns true/false")
+    @ApiResponse(responseCode = "200", description = "Check result returned")
+    @GetMapping("/{productId}")
+    public ResponseEntity<BaseResponse<Boolean>> isFavorite(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable Long productId) {
+        log.info("Request to check favorite productId={} for userId={}", productId, principal.getUser().getId());
+
+        boolean result = favoriteService.isFavorite(principal.getUser().getId(), productId);
+
+        return ResponseEntity.ok(
+                BaseResponseFactory.success(HttpStatus.OK, "Favorite status fetched", result)
+        );
+    }
+
     @Operation(summary = "Add to favorites", description = "Adds a product to favorites")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Added to favorites"),

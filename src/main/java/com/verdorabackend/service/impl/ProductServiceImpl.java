@@ -10,7 +10,6 @@ import com.verdorabackend.mapper.ProductMapper;
 import com.verdorabackend.repository.CategoryRepository;
 import com.verdorabackend.repository.ProductRepository;
 import com.verdorabackend.repository.ProductSpecification;
-import com.verdorabackend.repository.UserRepository;
 import com.verdorabackend.service.ProductService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,7 +21,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 
-
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -31,12 +29,37 @@ public class ProductServiceImpl implements ProductService {
     private final ProductRepository productRepository;
     private final ProductMapper productMapper;
     private final CategoryRepository categoryRepository;
-    private final UserRepository userRepository;
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<ProductResponse> getProducts(
+            Long categoryId,
+            BigDecimal minPrice,
+            BigDecimal maxPrice,
+            Boolean discount,
+            String search,
+            Pageable pageable
+    ) {
+        log.debug("Fetching products: categoryId={}, minPrice={}, maxPrice={}, discount={}, search={}",
+                categoryId, minPrice, maxPrice, discount, search);
+
+        Specification<Product> spec = ProductSpecification.filter(
+                categoryId, minPrice, maxPrice, discount, search);
+
+        return productRepository.findAll(spec, pageable)
+                .map(productMapper::toResponse);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ProductResponse getProduct(Long productId) {
+        log.debug("Fetching product id={}", productId);
+        return productMapper.toResponse(getByIdOrThrow(productId));
+    }
 
     @Override
     @Transactional
     public ProductResponse createProduct(ProductRequest productRequest) {
-
         log.debug("Creating product with name: {}", productRequest.name());
 
         Category category = categoryRepository.findById(productRequest.categoryId())
@@ -52,7 +75,6 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional
     public ProductResponse updateProduct(Long productId, ProductRequest productRequest) {
-
         log.debug("Updating product with id: {}", productId);
         Product product = getByIdOrThrow(productId);
         productMapper.updateProductFromRequest(productRequest, product);
@@ -73,30 +95,8 @@ public class ProductServiceImpl implements ProductService {
         log.info("Product deleted, id={}", productId);
     }
 
-    @Override
-    @Transactional(readOnly = true)
-    public Page<ProductResponse> getProducts(
-            Long categoryId,
-            BigDecimal minPrice,
-            BigDecimal maxPrice,
-            Boolean discount,
-            Pageable pageable
-    ) {
-        log.debug("Fetching products: categoryId={}, minPrice={}, maxPrice={}, discount={}",
-                categoryId, minPrice, maxPrice, discount);
-
-        Specification<Product> spec = ProductSpecification.filter(
-                categoryId, minPrice, maxPrice, discount);
-
-        return productRepository.findAll(spec, pageable)
-                .map(productMapper::toResponse);
-    }
-
-
     private Product getByIdOrThrow(Long id) {
         return productRepository.findById(id)
                 .orElseThrow(() -> new ProductNotFoundException(id));
     }
-
-
 }
