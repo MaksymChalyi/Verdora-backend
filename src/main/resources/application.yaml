@@ -1,5 +1,11 @@
 server:
   port: ${SERVER_PORT:8081}
+  servlet:
+    session:
+      cookie:
+        same-site: none
+        secure: true
+        http-only: true
 
 springdoc:
   default-flat-param-object: true
