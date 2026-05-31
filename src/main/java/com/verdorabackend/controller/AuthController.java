@@ -139,7 +139,7 @@ public class AuthController {
             description = "Authenticates user and sets accessToken and refreshToken cookies"
     )
     @PostMapping("/login")
-    public ResponseEntity<BaseResponse<SignInResponse>> login(@RequestBody SignInRequest request, HttpServletResponse response) {
+    public ResponseEntity<BaseResponse<SignInResponse>> login(@Valid @RequestBody SignInRequest request, HttpServletResponse response) {
         AuthResult result = authService.login(request);
         cookieService.addAccessToken(response, result.accessToken());
         cookieService.addRefreshToken(response, result.refreshToken());
@@ -221,11 +221,12 @@ public class AuthController {
             )
     )
     @PostMapping("/logout")
-    public ResponseEntity<BaseResponse<Void>> logout(HttpServletResponse response) {
+    public ResponseEntity<BaseResponse<Void>> logout(HttpServletRequest request, HttpServletResponse response) {
         cookieService.clearAuthCookies(response);
-        return ResponseEntity.ok(
-                BaseResponseFactory.success(HttpStatus.OK, "Successfully logged out")
-        );
+        if (request.getSession(false) != null) {
+            request.getSession(false).invalidate();
+        }
+        return ResponseEntity.ok(BaseResponseFactory.success(HttpStatus.OK, "Successfully logged out"));
     }
 
     @Operation(

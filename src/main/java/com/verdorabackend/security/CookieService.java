@@ -12,14 +12,25 @@ public class CookieService {
 
         Cookie access = new Cookie("accessToken", null);
         access.setMaxAge(0);
+        access.setHttpOnly(true);
+        access.setSecure(false);
         access.setPath("/");
 
         Cookie refresh = new Cookie("refreshToken", null);
         refresh.setMaxAge(0);
+        refresh.setHttpOnly(true);
+        refresh.setSecure(false);
         refresh.setPath("/auth/refresh");
+
+        Cookie session = new Cookie("JSESSIONID", null);
+        session.setHttpOnly(true);
+        session.setSecure(false);
+        session.setPath("/");
+        session.setMaxAge(0);
 
         response.addCookie(access);
         response.addCookie(refresh);
+        response.addCookie(session);
     }
 
     public void addAccessToken(HttpServletResponse response, String token) {

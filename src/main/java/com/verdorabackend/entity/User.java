@@ -32,7 +32,7 @@ public class User {
     @Column(name = "email", nullable = false, length = 256, unique = true)
     private String email;
 
-    @Pattern(regexp = "^\\+?[0-9]{7,15}$")
+    @Pattern(regexp = "^$|^\\+?[0-9]{7,15}$")
     @Column(name = "phone_number", length = 32)
     private String phoneNumber;
 
