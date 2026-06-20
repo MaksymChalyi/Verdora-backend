@@ -58,7 +58,7 @@ public class ProductController {
             @Parameter(description = "Search by name or description (case-insensitive)")
             @RequestParam(required = false) String search,
 
-            @PageableDefault(size = 20, sort = "id") Pageable pageable
+            @PageableDefault(size = 12, sort = "id") Pageable pageable
     ) {
         log.info("Request to get products: categoryId={}, minPrice={}, maxPrice={}, discount={}, search={}",
                 categoryId, minPrice, maxPrice, discount, search);
