@@ -9,7 +9,7 @@ public record CategoryResponse(
         String categoryId,
 
         @Schema(description = "Category name", example = "Electronics")
-        String category
+        String name
         ) {
 
 }
