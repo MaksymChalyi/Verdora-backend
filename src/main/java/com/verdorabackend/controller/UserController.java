@@ -276,7 +276,7 @@ public class UserController {
     })
     @GetMapping
     public ResponseEntity<BaseResponse<Page<UserResponse>>> getAllUsers(
-            @PageableDefault(size = 20, sort = "id") Pageable pageable) {
+            @PageableDefault(size = 12, sort = "id") Pageable pageable) {
         log.info("Request to get all users, page={}, size={}", pageable.getPageNumber(), pageable.getPageSize());
         Page<UserResponse> users = userService.getAllUsers(pageable);
 
