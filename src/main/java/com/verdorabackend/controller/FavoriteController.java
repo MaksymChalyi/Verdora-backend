@@ -97,4 +97,5 @@ public class FavoriteController {
                 BaseResponseFactory.success(HttpStatus.OK, "Removed from favorites")
         );
     }
+
 }
