@@ -3,6 +3,7 @@ package com.verdorabackend.service.impl;
 import com.verdorabackend.dto.request.CategoryRequest;
 import com.verdorabackend.dto.response.CategoryResponse;
 import com.verdorabackend.entity.Category;
+import com.verdorabackend.exception.CategoryAlreadyExistsException;
 import com.verdorabackend.exception.CategoryNotFoundException;
 import com.verdorabackend.mapper.CategoryMapper;
 import com.verdorabackend.repository.CategoryRepository;
@@ -43,6 +44,9 @@ public class CategoryServiceImpl implements CategoryService {
     @Transactional
     public CategoryResponse createCategory(CategoryRequest request) {
         log.debug("Creating category with name: {}", request.name());
+        if (categoryRepository.existsByNameIgnoreCase(request.name())) {
+            throw new CategoryAlreadyExistsException(request.name());
+        }
         Category category = categoryMapper.toEntity(request);
         Category saved = categoryRepository.save(category);
         log.info("Category created, id={}", saved.getId());

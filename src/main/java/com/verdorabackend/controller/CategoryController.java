@@ -82,6 +82,7 @@ public class CategoryController {
                     )
             )
     })
+    @SecurityRequirement(name = "Cookie-based Authentication")
     @PostMapping
     public ResponseEntity<BaseResponse<CategoryResponse>> createCategory(
             @RequestBody @Valid CategoryRequest request) {

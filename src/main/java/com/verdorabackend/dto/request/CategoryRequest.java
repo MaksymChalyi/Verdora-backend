@@ -10,8 +10,5 @@ public record CategoryRequest(
         @Schema(description = "Category name", example = "Electronics")
         @NotBlank
         @Size(max = 256)
-        String name
-
-) {
-
+        String name) {
 }
