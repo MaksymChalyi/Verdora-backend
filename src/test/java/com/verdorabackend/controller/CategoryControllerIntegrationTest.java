@@ -16,7 +16,11 @@ class CategoryControllerIntegrationTest extends BaseIntegrationTest {
     void getAllCategories_returns200() throws Exception {
         mockMvc.perform(get("/categories"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data").isArray());
+                .andExpect(jsonPath("$.data.content").isArray())
+                .andExpect(jsonPath("$.data.totalElements").value(3))
+                .andExpect(jsonPath("$.data.totalPages").value(1))
+                .andExpect(jsonPath("$.data.number").value(0))
+                .andExpect(jsonPath("$.data.size").value(12));
     }
 
     // ── GET /categories/{id} ──────────────────────────────────────────────────
