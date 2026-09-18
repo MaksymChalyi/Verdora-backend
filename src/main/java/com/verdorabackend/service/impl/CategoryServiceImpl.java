@@ -9,10 +9,10 @@ import com.verdorabackend.repository.CategoryRepository;
 import com.verdorabackend.service.CategoryService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 
 @Service
@@ -23,14 +23,14 @@ public class CategoryServiceImpl implements CategoryService {
     private final CategoryRepository categoryRepository;
     private final CategoryMapper categoryMapper;
 
-   @Override
-@Transactional(readOnly = true)
-public Page<CategoryResponse> getAllCategories(Pageable pageable) {
-    log.debug("Fetching categories with pagination: {}", pageable);
+    @Override
+    @Transactional(readOnly = true)
+    public Page<CategoryResponse> getAllCategories(Pageable pageable) {
+        log.debug("Fetching categories with pagination: {}", pageable);
 
-    return categoryRepository.findAll(pageable)
-            .map(categoryMapper::toResponse);
-}
+        return categoryRepository.findAll(pageable)
+                .map(categoryMapper::toResponse);
+    }
 
     @Override
     @Transactional(readOnly = true)

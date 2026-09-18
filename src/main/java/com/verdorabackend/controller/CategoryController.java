@@ -16,13 +16,13 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.web.PageableDefault;
 
 
 @RestController
@@ -37,16 +37,16 @@ public class CategoryController {
     @Operation(summary = "Get all categories", description = "Returns all categories")
     @ApiResponse(responseCode = "200", description = "Categories returned")
     @GetMapping
-public ResponseEntity<BaseResponse<Page<CategoryResponse>>> getAllCategories(
-        @PageableDefault(size = 12, sort = "id") Pageable pageable) {
-    log.info("Request to get all categories");
+    public ResponseEntity<BaseResponse<Page<CategoryResponse>>> getAllCategories(
+            @PageableDefault(size = 12, sort = "id") Pageable pageable) {
+        log.info("Request to get all categories");
 
-    Page<CategoryResponse> response = categoryService.getAllCategories(pageable);
+        Page<CategoryResponse> response = categoryService.getAllCategories(pageable);
 
-    return ResponseEntity.ok(
-            BaseResponseFactory.success(HttpStatus.OK, "Categories fetched successfully", response)
-    );
-}
+        return ResponseEntity.ok(
+                BaseResponseFactory.success(HttpStatus.OK, "Categories fetched successfully", response)
+        );
+    }
 
     @Operation(summary = "Get category by ID", description = "Returns a single category by ID")
     @ApiResponses(value = {
