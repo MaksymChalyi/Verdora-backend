@@ -2,8 +2,8 @@ package com.verdorabackend.service;
 
 import com.verdorabackend.dto.request.CategoryRequest;
 import com.verdorabackend.dto.response.CategoryResponse;
-
-import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 public interface CategoryService {
 
@@ -13,7 +13,7 @@ public interface CategoryService {
 
     void deleteCategory(Long categoryId);
 
-    List<CategoryResponse> getAllCategories();
+    Page<CategoryResponse> getAllCategories(Pageable pageable);
 
     CategoryResponse getCategory(Long categoryId);
 }
