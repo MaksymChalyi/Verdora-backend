@@ -2,7 +2,9 @@
 
 ## Overview
 
-CRUD endpoints for managing product categories. All endpoints are public (no authentication required).
+Endpoints for viewing and managing product categories.
+
+Public endpoints are available without authentication. Category management and the admin category list require the `ADMIN` role.
 
 ## Entity
 
@@ -24,15 +26,124 @@ CREATE TABLE categories (
 
 ## Endpoints
 
-| Method | Endpoint | Description | Auth |
-|---|---|---|---|
-| POST | `/categories` | Create category | ❌ |
-| PUT | `/categories/{id}` | Update category | ❌ |
-| DELETE | `/categories/{id}` | Delete category | ❌ |
+| Method | Endpoint            | Description                      | Auth     |
+| ------ | ------------------- | -------------------------------- | -------- |
+| GET    | `/categories`       | Get paginated list of categories | ❌       |
+| GET    | `/categories/{id}`  | Get category by ID               | ❌       |
+| GET    | `/admin/categories` | Get all categories for admin     | 🔒 ADMIN |
+| POST   | `/categories`       | Create category                  | 🔒 ADMIN |
+| PUT    | `/categories/{id}`  | Update category                  | 🔒 ADMIN |
+| DELETE | `/categories/{id}`  | Delete category                  | 🔒 ADMIN |
+
+---
+
+### GET `/categories` — Get all categories
+
+Returns a paginated list of categories.
+
+**Authentication:** not required
+
+**Default page size:** 12
+
+**Success response `200`**
+
+```json
+{
+  "timestamp": "2026-04-26T12:00:00Z",
+  "status": 200,
+  "message": "Categories fetched successfully",
+  "data": {
+    "content": [
+      {
+        "categoryId": "1",
+        "name": "Electronics"
+      }
+    ],
+    "totalElements": 1,
+    "totalPages": 1,
+    "size": 12,
+    "number": 0
+  }
+}
+```
+
+---
+
+### GET `/categories/{id}` — Get category by ID
+
+**Path variable:** `id` — category ID
+
+**Authentication:** not required
+
+**Success response `200`**
+
+```json
+{
+  "timestamp": "2026-04-26T12:00:00Z",
+  "status": 200,
+  "message": "Category fetched successfully",
+  "data": {
+    "categoryId": "1",
+    "name": "Electronics"
+  }
+}
+```
+
+**Error response `404`**
+
+```json
+{
+  "timestamp": "2026-04-26T12:00:00Z",
+  "status": 404,
+  "message": "Category with id 1 not found",
+  "data": null
+}
+```
+
+---
+
+### GET `/admin/categories` — Get all categories
+
+Returns all categories for the admin category management view.
+
+**Authentication:** required
+
+**Role:** `ADMIN`
+
+**Success response `200`**
+
+```json
+{
+  "timestamp": "2026-04-26T12:00:00Z",
+  "status": 200,
+  "message": "Categories fetched successfully",
+  "data": [
+    {
+      "categoryId": "1",
+      "name": "Electronics"
+    }
+  ]
+}
+```
+
+If there are no categories, the endpoint returns an empty list:
+
+```json
+{
+  "timestamp": "2026-04-26T12:00:00Z",
+  "status": 200,
+  "message": "Categories fetched successfully",
+  "data": []
+}
+```
 
 ---
 
 ### POST `/categories` — Create
+
+**Authentication:** required
+
+**Role:** `ADMIN`
 
 **Request body**
 
@@ -42,9 +153,9 @@ CREATE TABLE categories (
 }
 ```
 
-| Field | Required | Validation |
-|---|---|---|
-| `name` | ✅ | not blank, max 256 chars |
+| Field  | Required | Validation               |
+| ------ | -------- | ------------------------ |
+| `name` | ✅       | not blank, max 256 chars |
 
 **Success response `201`**
 
@@ -55,7 +166,7 @@ CREATE TABLE categories (
   "message": "Category created",
   "data": {
     "categoryId": "1",
-    "category": "Electronics"
+    "name": "Electronics"
   }
 }
 ```
@@ -63,6 +174,10 @@ CREATE TABLE categories (
 ---
 
 ### PUT `/categories/{id}` — Update
+
+**Authentication:** required
+
+**Role:** `ADMIN`
 
 **Path variable:** `id` — category ID
 
@@ -83,7 +198,7 @@ CREATE TABLE categories (
   "message": "Category updated",
   "data": {
     "categoryId": "1",
-    "category": "Home Appliances"
+    "name": "Home Appliances"
   }
 }
 ```
@@ -102,6 +217,10 @@ CREATE TABLE categories (
 ---
 
 ### DELETE `/categories/{id}` — Delete
+
+**Authentication:** required
+
+**Role:** `ADMIN`
 
 **Path variable:** `id` — category ID
 
@@ -149,7 +268,7 @@ sequenceDiagram
     CategoryServiceImpl->>CategoryMapper: toResponse(saved)
     CategoryMapper-->>CategoryServiceImpl: CategoryResponse
     CategoryServiceImpl-->>CategoryController: CategoryResponse
-    CategoryController-->>Client: 201 { categoryId, category }
+    CategoryController-->>Client: 201 { categoryId, name }
 ```
 
 ## Key Components

@@ -38,6 +38,7 @@ public class TestSecurityConfig {
                                 "/categories/**", "/oauth2/**", "/login/oauth2/**"
                         ).permitAll()
                         .requestMatchers(HttpMethod.GET, "/products", "/products/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/admin/categories").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))

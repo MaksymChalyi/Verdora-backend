@@ -14,6 +14,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -30,6 +31,17 @@ public class CategoryServiceImpl implements CategoryService {
 
         return categoryRepository.findAll(pageable)
                 .map(categoryMapper::toResponse);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<CategoryResponse> getAllCategoriesForAdmin() {
+        log.debug("Fetching all categories for admin");
+
+        return categoryRepository.findAll()
+                .stream()
+                .map(categoryMapper::toResponse)
+                .toList();
     }
 
     @Override
