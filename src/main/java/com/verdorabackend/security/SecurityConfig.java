@@ -39,6 +39,7 @@ public class SecurityConfig {
                                 .permitAll()
                                 .requestMatchers(HttpMethod.GET, "/products", "/products/**")
                                 .permitAll()
+                                .requestMatchers(HttpMethod.GET, "/admin/categories").hasRole("ADMIN")
                                 .anyRequest()
                                 .authenticated())
                 .exceptionHandling(ex -> ex
