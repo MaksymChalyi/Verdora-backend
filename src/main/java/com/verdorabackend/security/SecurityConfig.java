@@ -38,7 +38,8 @@ public class SecurityConfig {
                                         "/login/oauth2/**")
                                 .permitAll()
                                 .requestMatchers(HttpMethod.GET, "/products", "/products/**")
-                                .permitAll()
+                                                        .permitAll()
+                                .requestMatchers(HttpMethod.GET, "/admin/orders").hasRole("ADMIN")
                                 .anyRequest()
                                 .authenticated())
                 .exceptionHandling(ex -> ex

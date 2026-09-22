@@ -18,6 +18,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.verdorabackend.dto.response.AdminOrderResponse;
+import com.verdorabackend.dto.response.UserResponse;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -85,6 +89,15 @@ public class OrderServiceImpl implements OrderService {
                 .toList();
     }
 
+@Override
+@Transactional(readOnly = true)
+public Page<AdminOrderResponse> getAllOrders(Pageable pageable) {
+    log.debug("Fetching all orders for admin with pagination: {}", pageable);
+
+    return orderRepository.findAll(pageable)
+            .map(this::buildAdminOrderResponse);
+}
+
     @Override
     @Transactional(readOnly = true)
     public OrderResponse getOrder(Long userId, Long orderId) {
@@ -123,6 +136,23 @@ public class OrderServiceImpl implements OrderService {
         log.info("Order status updated, id={}, status={}", orderId, request.status());
         return buildOrderResponse(saved);
     }
+
+    private AdminOrderResponse buildAdminOrderResponse(Order order) {
+    UserResponse customer = new UserResponse(
+            order.getUser().getId(),
+            order.getUser().getName(),
+            order.getUser().getEmail(),
+            order.getUser().getPhoneNumber()
+    );
+
+    return new AdminOrderResponse(
+            order.getId(),
+            order.getCreatedAt(),
+            customer,
+            order.getTotalPrice(),
+            order.getStatus()
+    );
+}
 
     private OrderResponse buildOrderResponse(Order order) {
         List<OrderItemResponse> itemResponses = order.getItems().stream()
