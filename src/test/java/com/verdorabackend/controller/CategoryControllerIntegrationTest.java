@@ -22,7 +22,30 @@ class CategoryControllerIntegrationTest extends BaseIntegrationTest {
                 .andExpect(jsonPath("$.data.number").value(0))
                 .andExpect(jsonPath("$.data.size").value(12));
     }
+    // ── GET /admin/categories ────────────────────────────────────────────────
 
+    @Test
+    void getAllCategories_asAdmin_returns200() throws Exception {
+        mockMvc.perform(get("/admin/categories")
+                        .cookie(adminCookie()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data").isArray())
+                .andExpect(jsonPath("$.data.length()").value(3))
+                .andExpect(jsonPath("$.data[0].name").isNotEmpty());
+    }
+
+    @Test
+    void getAllCategories_asUser_returns403() throws Exception {
+        mockMvc.perform(get("/admin/categories")
+                        .cookie(userCookie()))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void getAllCategories_withoutAuthentication_returns401() throws Exception {
+        mockMvc.perform(get("/admin/categories"))
+                .andExpect(status().isUnauthorized());
+    }
     // ── GET /categories/{id} ──────────────────────────────────────────────────
 
     @Test
