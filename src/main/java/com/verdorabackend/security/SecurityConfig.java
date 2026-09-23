@@ -40,6 +40,7 @@ public class SecurityConfig {
                                 .requestMatchers(HttpMethod.GET, "/products", "/products/**")
                                 .permitAll()
                                 .requestMatchers(HttpMethod.GET, "/admin/categories").hasRole("ADMIN")
+                                .requestMatchers(HttpMethod.GET, "/admin/orders").hasRole("ADMIN")
                                 .anyRequest()
                                 .authenticated())
                 .exceptionHandling(ex -> ex

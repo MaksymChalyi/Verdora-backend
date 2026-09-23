@@ -57,8 +57,40 @@ class OrderControllerIntegrationTest extends BaseIntegrationTest {
     @Test
     void cancelOrder_notFound_returns404() throws Exception {
         mockMvc.perform(delete("/orders/99999")
-                        .cookie(userCookie()))
+                .cookie(userCookie()))
                 .andExpect(status().isNotFound());
     }
 
+        // ── GET /admin/orders ─────────────────────────────────────────────────────
+
+    @Test
+    void getAllOrders_admin_returns200() throws Exception {
+        mockMvc.perform(get("/admin/orders")
+                        .cookie(adminCookie()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content").isArray())
+                .andExpect(jsonPath("$.data.size").value(12));
+    }
+
+    @Test
+    void getAllOrders_user_returns403() throws Exception {
+        mockMvc.perform(get("/admin/orders")
+                        .cookie(userCookie()))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void getAllOrders_unauthenticated_returns401() throws Exception {
+        mockMvc.perform(get("/admin/orders"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void getAllOrders_pageSizeCannotExceed12() throws Exception {
+        mockMvc.perform(get("/admin/orders")
+                        .cookie(adminCookie())
+                        .param("size", "50"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.size").value(12));
+    }
 }
