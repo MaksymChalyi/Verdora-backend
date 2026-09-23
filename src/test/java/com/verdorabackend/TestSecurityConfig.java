@@ -37,7 +37,8 @@ public class TestSecurityConfig {
                                 "/v3/api-docs/**", "/swagger-ui/**",
                                 "/categories/**", "/oauth2/**", "/login/oauth2/**"
                         ).permitAll()
-                                        .requestMatchers(HttpMethod.GET, "/products", "/products/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/products", "/products/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/admin/categories").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/admin/orders").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )
