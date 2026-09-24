@@ -32,6 +32,7 @@ public class TestSecurityConfig {
                 )
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        .requestMatchers(HttpMethod.PUT, "/categories/**").hasRole("ADMIN")
                         .requestMatchers(
                                 "/auth/**", "/health/**",
                                 "/v3/api-docs/**", "/swagger-ui/**",
