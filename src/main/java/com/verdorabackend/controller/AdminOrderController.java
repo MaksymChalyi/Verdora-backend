@@ -1,6 +1,7 @@
 package com.verdorabackend.controller;
 
 import com.verdorabackend.dto.response.AdminOrderResponse;
+import com.verdorabackend.entity.OrderStatus;
 import com.verdorabackend.dto.response.BaseResponse;
 import com.verdorabackend.dto.response.BaseResponseFactory;
 import com.verdorabackend.service.OrderService;
@@ -12,9 +13,11 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import java.time.LocalDate;
 
 @RestController
 @RequiredArgsConstructor
@@ -27,6 +30,9 @@ public class AdminOrderController {
 
     @GetMapping
     public ResponseEntity<BaseResponse<Page<AdminOrderResponse>>> getAllOrders(
+            @RequestParam(required = false) OrderStatus status,
+            @RequestParam(required = false) LocalDate dateFrom,
+            @RequestParam(required = false) LocalDate dateTo,
             @PageableDefault(
                     size = MAX_PAGE_SIZE,
                     sort = "createdAt",
@@ -39,7 +45,8 @@ public class AdminOrderController {
                 pageable.getSort()
         );
 
-        Page<AdminOrderResponse> response = orderService.getAllOrders(limitedPageable);
+        Page<AdminOrderResponse> response = orderService.getAllOrders(
+                status, dateFrom, dateTo, limitedPageable);
 
         return ResponseEntity.ok(
                 BaseResponseFactory.success(

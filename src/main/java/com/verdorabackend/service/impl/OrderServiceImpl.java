@@ -13,6 +13,7 @@ import com.verdorabackend.exception.OrderNotFoundException;
 import com.verdorabackend.mapper.OrderMapper;
 import com.verdorabackend.repository.CartRepository;
 import com.verdorabackend.repository.OrderRepository;
+import com.verdorabackend.repository.OrderSpecification;
 import com.verdorabackend.service.OrderService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,8 +23,10 @@ import com.verdorabackend.dto.response.AdminOrderResponse;
 import com.verdorabackend.dto.response.UserResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 
 @Service
@@ -89,14 +92,31 @@ public class OrderServiceImpl implements OrderService {
                 .toList();
     }
 
-@Override
-@Transactional(readOnly = true)
-public Page<AdminOrderResponse> getAllOrders(Pageable pageable) {
-    log.debug("Fetching all orders for admin with pagination: {}", pageable);
+    @Override
+    @Transactional(readOnly = true)
+    public Page<AdminOrderResponse> getAllOrders(Pageable pageable) {
+        return getAllOrders(null, null, null, pageable);
+    }
 
-    return orderRepository.findAll(pageable)
-            .map(this::buildAdminOrderResponse);
-}
+    @Override
+    @Transactional(readOnly = true)
+    public Page<AdminOrderResponse> getAllOrders(
+            OrderStatus status,
+            LocalDate dateFrom,
+            LocalDate dateTo,
+            Pageable pageable
+    ) {
+        log.debug(
+                "Fetching admin orders: status={}, dateFrom={}, dateTo={}, pageable={}",
+                status, dateFrom, dateTo, pageable
+        );
+
+        Specification<Order> specification =
+                OrderSpecification.filter(status, dateFrom, dateTo);
+
+        return orderRepository.findAll(specification, pageable)
+                .map(this::buildAdminOrderResponse);
+    }
 
     @Override
     @Transactional(readOnly = true)
