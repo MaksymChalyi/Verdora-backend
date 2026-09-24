@@ -1,5 +1,6 @@
 package com.verdorabackend.security;
 
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -10,7 +11,6 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfigurationSource;
-import jakarta.servlet.http.HttpServletResponse;
 
 @Configuration
 @RequiredArgsConstructor
@@ -22,7 +22,8 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        return http.csrf(AbstractHttpConfigurer::disable)
+        return http
+                .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource))
                 .authorizeHttpRequests(
                         auth -> auth
@@ -40,8 +41,7 @@ public class SecurityConfig {
                                 .permitAll()
                                 .requestMatchers(HttpMethod.GET, "/products", "/products/**")
                                 .permitAll()
-                                .requestMatchers(HttpMethod.GET, "/admin/categories").hasRole("ADMIN")
-                                .requestMatchers(HttpMethod.GET, "/admin/orders").hasRole("ADMIN")
+                                .requestMatchers("/admin", "/admin/**").hasRole("ADMIN")
                                 .anyRequest()
                                 .authenticated())
                 .exceptionHandling(ex -> ex
@@ -49,12 +49,23 @@ public class SecurityConfig {
                             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                             response.setContentType("application/json;charset=UTF-8");
                             response.getWriter().write("""
-                    {
-                      "status": 401,
-                      "message": "Unauthorized",
-                      "data": null
-                    }
-                    """);
+                                    {
+                                      "status": 401,
+                                      "message": "Unauthorized",
+                                      "data": null
+                                    }
+                                    """);
+                        })
+                        .accessDeniedHandler((request, response, accessDeniedException) -> {
+                            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                            response.setContentType("application/json;charset=UTF-8");
+                            response.getWriter().write("""
+                                    {
+                                      "status": 403,
+                                      "message": "Forbidden",
+                                      "data": null
+                                    }
+                                    """);
                         })
                 )
                 .oauth2Login(oauth2 -> oauth2.successHandler(oAuth2SuccessHandler))
