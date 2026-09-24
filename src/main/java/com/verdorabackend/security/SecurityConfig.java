@@ -27,6 +27,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(
                         auth -> auth
                                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                                .requestMatchers(HttpMethod.PUT, "/categories/**").hasRole("ADMIN")
                                 .requestMatchers(
                                         "/auth/**",
                                         "/health/**",

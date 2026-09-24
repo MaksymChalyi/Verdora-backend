@@ -3,6 +3,7 @@ package com.verdorabackend.service.impl;
 import com.verdorabackend.dto.request.CategoryRequest;
 import com.verdorabackend.dto.response.CategoryResponse;
 import com.verdorabackend.entity.Category;
+import com.verdorabackend.exception.CategoryAlreadyExistsException;
 import com.verdorabackend.exception.CategoryNotFoundException;
 import com.verdorabackend.mapper.CategoryMapper;
 import com.verdorabackend.repository.CategoryRepository;
@@ -13,7 +14,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 
 @Service
 @RequiredArgsConstructor
@@ -53,6 +53,11 @@ public class CategoryServiceImpl implements CategoryService {
     @Transactional
     public CategoryResponse updateCategory(Long id, CategoryRequest request) {
         Category category = getByIdOrThrow(id);
+
+        if (categoryRepository.existsByNameIgnoreCaseAndIdNot(request.name(), id)) {
+            throw new CategoryAlreadyExistsException(request.name());
+        }
+
         category.setName(request.name());
         log.info("Category updated, id={}", id);
         return categoryMapper.toResponse(category);
