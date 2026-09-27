@@ -38,7 +38,7 @@ public class ProductController {
 
     @Operation(
             summary = "Get products",
-            description = "Returns paginated list of products with optional filters and search"
+            description = "Returns paginated list of products with optional filters, search and sorting"
     )
     @ApiResponse(responseCode = "200", description = "Products returned")
     @GetMapping
@@ -55,7 +55,7 @@ public class ProductController {
             @Parameter(description = "Only products with discount (discountPrice < price)")
             @RequestParam(required = false) Boolean discount,
 
-            @Parameter(description = "Search by name or description (case-insensitive)")
+            @Parameter(description = "Search by product name (case-insensitive)")
             @RequestParam(required = false) String search,
 
             @PageableDefault(size = 12, sort = "id") Pageable pageable

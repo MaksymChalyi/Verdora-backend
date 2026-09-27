@@ -7,10 +7,12 @@ import org.springframework.data.jpa.domain.Specification;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 public class ProductSpecification {
 
-    private ProductSpecification() {}
+    private ProductSpecification() {
+    }
 
     public static Specification<Product> filter(
             Long categoryId,
@@ -38,13 +40,10 @@ public class ProductSpecification {
                 predicates.add(cb.lessThan(root.get("discountPrice"), root.get("price")));
             }
 
-            // search — пошук по назві або опису (case-insensitive)
+            // search - пошук по назві (case-insensitive)
             if (search != null && !search.isBlank()) {
-                String pattern = "%" + search.toLowerCase() + "%";
-                predicates.add(cb.or(
-                        cb.like(cb.lower(root.get("name")), pattern),
-                        cb.like(cb.lower(root.get("description")), pattern)
-                ));
+                String pattern = "%" + search.trim().toLowerCase(Locale.ROOT) + "%";
+                predicates.add(cb.like(cb.lower(root.get("name")), pattern));
             }
 
             return cb.and(predicates.toArray(new Predicate[0]));
