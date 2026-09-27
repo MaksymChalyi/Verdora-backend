@@ -14,6 +14,8 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import java.nio.file.AccessDeniedException;
+
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -67,6 +69,17 @@ public class GlobalExceptionHandler {
                 .body(BaseResponseFactory.error(
                         HttpStatus.BAD_REQUEST,
                         "Malformed JSON request"
+                ));
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<BaseResponse<Void>> handleAccessDenied(
+            AccessDeniedException exception) {
+        return ResponseEntity
+                .status(HttpStatus.FORBIDDEN)
+                .body(BaseResponseFactory.error(
+                        HttpStatus.FORBIDDEN,
+                        "Forbidden"
                 ));
     }
 
