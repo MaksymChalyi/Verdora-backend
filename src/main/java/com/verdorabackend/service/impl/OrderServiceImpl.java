@@ -1,8 +1,10 @@
 package com.verdorabackend.service.impl;
 
 import com.verdorabackend.dto.request.UpdateOrderStatusRequest;
+import com.verdorabackend.dto.response.AdminOrderResponse;
 import com.verdorabackend.dto.response.OrderItemResponse;
 import com.verdorabackend.dto.response.OrderResponse;
+import com.verdorabackend.dto.response.UserResponse;
 import com.verdorabackend.entity.Cart;
 import com.verdorabackend.entity.Order;
 import com.verdorabackend.entity.OrderItem;
@@ -17,13 +19,11 @@ import com.verdorabackend.repository.OrderSpecification;
 import com.verdorabackend.service.OrderService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import com.verdorabackend.dto.response.AdminOrderResponse;
-import com.verdorabackend.dto.response.UserResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -158,21 +158,21 @@ public class OrderServiceImpl implements OrderService {
     }
 
     private AdminOrderResponse buildAdminOrderResponse(Order order) {
-    UserResponse customer = new UserResponse(
-            order.getUser().getId(),
-            order.getUser().getName(),
-            order.getUser().getEmail(),
-            order.getUser().getPhoneNumber()
-    );
+        UserResponse customer = new UserResponse(
+                order.getUser().getId(),
+                order.getUser().getName(),
+                order.getUser().getEmail(),
+                order.getUser().getPhoneNumber()
+        );
 
-    return new AdminOrderResponse(
-            order.getId(),
-            order.getCreatedAt(),
-            customer,
-            order.getTotalPrice(),
-            order.getStatus()
-    );
-}
+        return new AdminOrderResponse(
+                order.getId(),
+                order.getCreatedAt(),
+                order.getTotalPrice(),
+                order.getStatus(),
+                customer
+        );
+    }
 
     private OrderResponse buildOrderResponse(Order order) {
         List<OrderItemResponse> itemResponses = order.getItems().stream()
@@ -193,10 +193,10 @@ public class OrderServiceImpl implements OrderService {
 
         return new OrderResponse(
                 order.getId(),
-                order.getStatus(),
+                order.getCreatedAt(),
                 order.getTotalPrice(),
-                itemResponses,
-                order.getCreatedAt()
+                order.getStatus(),
+                itemResponses
         );
     }
 }
