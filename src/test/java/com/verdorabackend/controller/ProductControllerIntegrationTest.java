@@ -259,17 +259,17 @@ class ProductControllerIntegrationTest extends BaseIntegrationTest {
                         .value("Product Without Discount"));
     }
 
-    // ── PUT /products/{id} ────────────────────────────────────────────────────
+    // ── PUT /products/{id} ─────────────────────────────────────────────────────
 
     @Test
-    void updateProduct_asAdmin_returns200() throws Exception {
+    void updateProduct_asAdmin_returns200WithUpdatedProduct() throws Exception {
         String body = """
                 {
                   "name": "Updated Product",
-                  "description": "Updated description for product",
+                  "description": "Updated description",
                   "price": 1500.00,
                   "categoryId": 1,
-                  "imageUrl": "https://example.com/image.jpg",
+                  "imageUrl": "https://example.com/updated-image.jpg",
                   "discountPrice": 1200.00
                 }
                 """;
@@ -279,19 +279,26 @@ class ProductControllerIntegrationTest extends BaseIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.name").value("Updated Product"));
+                .andExpect(jsonPath("$.data.productId").value(1))
+                .andExpect(jsonPath("$.data.name").value("Updated Product"))
+                .andExpect(jsonPath("$.data.description").value("Updated description"))
+                .andExpect(jsonPath("$.data.price").value(1500.00))
+                .andExpect(jsonPath("$.data.categoryId").value(1))
+                .andExpect(jsonPath("$.data.imageUrl")
+                        .value("https://example.com/updated-image.jpg"))
+                .andExpect(jsonPath("$.data.discountPrice").value(1200.00));
     }
 
     @Test
     void updateProduct_notFound_returns404() throws Exception {
         String body = """
                 {
-                  "name": "Test",
-                  "description": "Test description",
-                  "price": 100.00,
+                  "name": "Updated Product",
+                  "description": "Description",
+                  "price": 1000.00,
                   "categoryId": 1,
                   "imageUrl": "https://example.com/image.jpg",
-                  "discountPrice": 90.00
+                  "discountPrice": 900.00
                 }
                 """;
 
@@ -300,6 +307,211 @@ class ProductControllerIntegrationTest extends BaseIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void updateProduct_asUser_returns403() throws Exception {
+        String body = """
+            {
+              "name": "Updated Product",
+              "description": "Description",
+              "price": 1000.00,
+              "categoryId": 1,
+              "imageUrl": "https://example.com/image.jpg",
+              "discountPrice": 900.00
+            }
+            """;
+
+        mockMvc.perform(put("/products/1")
+                        .cookie(userCookie())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void updateProduct_withoutAuthentication_returns401() throws Exception {
+        String body = """
+            {
+              "name": "Updated Product",
+              "description": "Description",
+              "price": 1000.00,
+              "categoryId": 1,
+              "imageUrl": "https://example.com/image.jpg",
+              "discountPrice": 900.00
+            }
+            """;
+
+        mockMvc.perform(put("/products/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void updateProduct_missingName_returns400() throws Exception {
+        String body = """
+            {
+              "name": "",
+              "price": 1000,
+              "categoryId": 1,
+              "imageUrl": "https://example.com/image.jpg"
+            }
+            """;
+
+        mockMvc.perform(put("/products/1")
+                        .cookie(adminCookie())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Name is required"));
+    }
+
+    @Test
+    void updateProduct_missingPrice_returns400() throws Exception {
+        String body = """
+            {
+              "name": "Product",
+              "price": null,
+              "categoryId": 1,
+              "imageUrl": "https://example.com/image.jpg"
+            }
+            """;
+
+        mockMvc.perform(put("/products/1")
+                        .cookie(adminCookie())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Price is required"));
+    }
+
+    @Test
+    void updateProduct_missingCategory_returns400() throws Exception {
+        String body = """
+            {
+              "name": "Product",
+              "price": 1000,
+              "categoryId": null,
+              "imageUrl": "https://example.com/image.jpg"
+            }
+            """;
+
+        mockMvc.perform(put("/products/1")
+                        .cookie(adminCookie())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Category is required"));
+    }
+
+    @Test
+    void updateProduct_missingImage_returns400() throws Exception {
+        String body = """
+            {
+              "name": "Product",
+              "price": 1000,
+              "categoryId": 1,
+              "imageUrl": ""
+            }
+            """;
+
+        mockMvc.perform(put("/products/1")
+                        .cookie(adminCookie())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Image is required"));
+    }
+
+    @Test
+    void updateProduct_discountPriceNotLowerThanPrice_returns400() throws Exception {
+        String body = """
+            {
+              "name": "Updated Product",
+              "description": "Description",
+              "price": 1000.00,
+              "categoryId": 1,
+              "imageUrl": "https://example.com/image.jpg",
+              "discountPrice": 1000.00
+            }
+            """;
+
+        mockMvc.perform(put("/products/1")
+                        .cookie(adminCookie())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message")
+                        .value(org.hamcrest.Matchers.containsString(
+                                "Discount price must be lower than regular price"
+                        )));
+    }
+
+    @Test
+    void updateProduct_categoryNotFound_returns404() throws Exception {
+        String body = """
+            {
+              "name": "Updated Product",
+              "description": "Description",
+              "price": 1000.00,
+              "categoryId": 99999,
+              "imageUrl": "https://example.com/image.jpg",
+              "discountPrice": 900.00
+            }
+            """;
+
+        mockMvc.perform(put("/products/1")
+                        .cookie(adminCookie())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void updateProduct_multipleCategories_returns400() throws Exception {
+        String body = """
+            {
+              "name": "Updated Product",
+              "description": "Description",
+              "price": 1000.00,
+              "categoryId": [1, 2],
+              "imageUrl": "https://example.com/image.jpg",
+              "discountPrice": 900.00
+            }
+            """;
+
+        mockMvc.perform(put("/products/1")
+                        .cookie(adminCookie())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void updateProduct_withoutOptionalFields_returns200() throws Exception {
+        String body = """
+            {
+              "name": "Updated Without Optional Fields",
+              "price": 1000.00,
+              "categoryId": 1,
+              "imageUrl": "https://example.com/image.jpg"
+            }
+            """;
+
+        mockMvc.perform(put("/products/1")
+                        .cookie(adminCookie())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.name")
+                        .value("Updated Without Optional Fields"))
+                .andExpect(jsonPath("$.data.price").value(1000.00))
+                .andExpect(jsonPath("$.data.categoryId").value(1))
+                .andExpect(jsonPath("$.data.imageUrl")
+                        .value("https://example.com/image.jpg"))
+                .andExpect(jsonPath("$.data.description").doesNotExist())
+                .andExpect(jsonPath("$.data.discountPrice").doesNotExist());
     }
 
     // ── DELETE /products/{id} ─────────────────────────────────────────────────
