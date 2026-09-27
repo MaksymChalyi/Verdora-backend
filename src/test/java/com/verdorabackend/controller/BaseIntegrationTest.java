@@ -1,7 +1,6 @@
 package com.verdorabackend.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.verdorabackend.TestSecurityConfig;
 import com.verdorabackend.entity.Role;
 import com.verdorabackend.entity.User;
 import com.verdorabackend.security.JwtService;
@@ -17,7 +16,6 @@ import org.springframework.test.web.servlet.MockMvc;
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-@Import(TestSecurityConfig.class)
 public abstract class BaseIntegrationTest {
 
     @Autowired
