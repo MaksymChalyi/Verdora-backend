@@ -28,9 +28,8 @@ public class Product {
     @Column(name = "name", nullable = false, length = 256)
     private String name;
 
-    @NotBlank
     @Size(max = 1000)
-    @Column(name = "description", nullable = false, length = 1000)
+    @Column(name = "description", length = 1000)
     private String description;
 
     @NotNull
@@ -49,9 +48,8 @@ public class Product {
     @Column(name = "image_url", nullable = false, length = 512)
     private String imageUrl;
 
-    @NotNull
     @PositiveOrZero
-    @Column(name = "discount_price", nullable = false, precision = 10, scale = 2)
+    @Column(name = "discount_price", precision = 10, scale = 2)
     private BigDecimal discountPrice;
 
     @Column(name = "created_at", nullable = false, updatable = false)

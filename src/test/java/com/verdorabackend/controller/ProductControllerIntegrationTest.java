@@ -140,6 +140,87 @@ class ProductControllerIntegrationTest extends BaseIntegrationTest {
                 .andExpect(status().isNotFound());
     }
 
+    @Test
+    void createProduct_asUser_returns403() throws Exception {
+        String body = """
+            {
+              "name": "Test Product",
+              "description": "Description",
+              "price": 1000,
+              "categoryId": 1,
+              "imageUrl": "https://example.com/image.jpg",
+              "discountPrice": 900
+            }
+            """;
+
+        mockMvc.perform(post("/products")
+                        .cookie(userCookie())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void createProduct_missingRequiredFields_returns400() throws Exception {
+        String body = """
+            {
+              "name": "",
+              "price": null,
+              "categoryId": null,
+              "imageUrl": ""
+            }
+            """;
+
+        mockMvc.perform(post("/products")
+                        .cookie(adminCookie())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void createProduct_discountPriceNotLowerThanPrice_returns400() throws Exception {
+        String body = """
+            {
+              "name": "Test Product",
+              "price": 1000,
+              "categoryId": 1,
+              "imageUrl": "https://example.com/image.jpg",
+              "discountPrice": 1000
+            }
+            """;
+
+        mockMvc.perform(post("/products")
+                        .cookie(adminCookie())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message")
+                        .value(org.hamcrest.Matchers.containsString(
+                                "Discount price must be lower than regular price"
+                        )));
+    }
+
+    @Test
+    void createProduct_withoutOptionalFields_returns201() throws Exception {
+        String body = """
+            {
+              "name": "Product Without Discount",
+              "price": 1000,
+              "categoryId": 1,
+              "imageUrl": "https://example.com/image.jpg"
+            }
+            """;
+
+        mockMvc.perform(post("/products")
+                        .cookie(adminCookie())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.name")
+                        .value("Product Without Discount"));
+    }
+
     // ── PUT /products/{id} ────────────────────────────────────────────────────
 
     @Test
