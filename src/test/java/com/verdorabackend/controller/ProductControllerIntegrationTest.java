@@ -5,7 +5,8 @@ import org.springframework.http.MediaType;
 import org.springframework.transaction.annotation.Transactional;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @Transactional
 class ProductControllerIntegrationTest extends BaseIntegrationTest {
@@ -197,17 +198,29 @@ class ProductControllerIntegrationTest extends BaseIntegrationTest {
                   "discountPrice": 90.00
                 }
                 """;
+
         String result = mockMvc.perform(post("/products")
                         .cookie(adminCookie())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(createBody))
-                .andReturn().getResponse().getContentAsString();
+                .andExpect(status().isCreated())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
 
-        Long productId = objectMapper.readTree(result).path("data").path("productId").asLong();
+        Long productId = objectMapper.readTree(result)
+                .path("data")
+                .path("productId")
+                .asLong();
 
         mockMvc.perform(delete("/products/" + productId)
                         .cookie(adminCookie()))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message")
+                        .value("Product deleted successfully"));
+
+        mockMvc.perform(get("/products/" + productId))
+                .andExpect(status().isNotFound());
     }
 
     @Test
@@ -216,4 +229,18 @@ class ProductControllerIntegrationTest extends BaseIntegrationTest {
                         .cookie(adminCookie()))
                 .andExpect(status().isNotFound());
     }
+
+    @Test
+    void deleteProduct_asUser_returns403() throws Exception {
+        mockMvc.perform(delete("/products/1")
+                        .cookie(userCookie()))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void deleteProduct_withoutAuthentication_returns401() throws Exception {
+        mockMvc.perform(delete("/products/1"))
+                .andExpect(status().isUnauthorized());
+    }
+
 }
