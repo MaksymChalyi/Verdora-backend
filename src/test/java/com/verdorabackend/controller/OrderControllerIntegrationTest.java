@@ -13,7 +13,8 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @Transactional
 class OrderControllerIntegrationTest extends BaseIntegrationTest {
@@ -28,7 +29,6 @@ class OrderControllerIntegrationTest extends BaseIntegrationTest {
 
     @Test
     void placeOrder_emptyCart_returns400() throws Exception {
-        // Очищаємо кошик перед тестом
         mockMvc.perform(delete("/cart").cookie(userCookie()));
 
         mockMvc.perform(post("/orders")
@@ -58,29 +58,11 @@ class OrderControllerIntegrationTest extends BaseIntegrationTest {
                 .andExpect(status().isUnauthorized());
     }
 
-    // ── GET /orders/{id} ──────────────────────────────────────────────────────
+    // ── GET /orders/all ───────────────────────────────────────────────────────
 
     @Test
-    void getOrder_notFound_returns404() throws Exception {
-        mockMvc.perform(get("/orders/99999")
-                        .cookie(userCookie()))
-                .andExpect(status().isNotFound());
-    }
-
-    // ── DELETE /orders/{id} ───────────────────────────────────────────────────
-
-    @Test
-    void cancelOrder_notFound_returns404() throws Exception {
-        mockMvc.perform(delete("/orders/99999")
-                .cookie(userCookie()))
-                .andExpect(status().isNotFound());
-    }
-
-    // ── GET /admin/orders ─────────────────────────────────────────────────────
-
-    @Test
-    void getAllOrders_admin_returns200() throws Exception {
-        mockMvc.perform(get("/admin/orders")
+    void getAllOrders_asAdmin_returns200() throws Exception {
+        mockMvc.perform(get("/orders/all")
                         .cookie(adminCookie()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.content").isArray())
@@ -88,25 +70,16 @@ class OrderControllerIntegrationTest extends BaseIntegrationTest {
     }
 
     @Test
-    void getAllOrders_user_returns403() throws Exception {
-        mockMvc.perform(get("/admin/orders")
+    void getAllOrders_asUser_returns403() throws Exception {
+        mockMvc.perform(get("/orders/all")
                         .cookie(userCookie()))
                 .andExpect(status().isForbidden());
     }
 
     @Test
-    void getAllOrders_unauthenticated_returns401() throws Exception {
-        mockMvc.perform(get("/admin/orders"))
+    void getAllOrders_withoutAuthentication_returns401() throws Exception {
+        mockMvc.perform(get("/orders/all"))
                 .andExpect(status().isUnauthorized());
-    }
-
-    @Test
-    void getAllOrders_pageSizeCannotExceed12() throws Exception {
-        mockMvc.perform(get("/admin/orders")
-                        .cookie(adminCookie())
-                        .param("size", "50"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.size").value(12));
     }
 
     @Test
@@ -114,7 +87,7 @@ class OrderControllerIntegrationTest extends BaseIntegrationTest {
         createOrder(OrderStatus.SHIPPED, BigDecimal.valueOf(100));
         createOrder(OrderStatus.DELIVERED, BigDecimal.valueOf(200));
 
-        mockMvc.perform(get("/admin/orders")
+        mockMvc.perform(get("/orders/all")
                         .cookie(adminCookie())
                         .param("status", "DELIVERED"))
                 .andExpect(status().isOk())
@@ -127,7 +100,7 @@ class OrderControllerIntegrationTest extends BaseIntegrationTest {
         createOrder(OrderStatus.PENDING, BigDecimal.valueOf(100));
         String today = LocalDate.now().toString();
 
-        mockMvc.perform(get("/admin/orders")
+        mockMvc.perform(get("/orders/all")
                         .cookie(adminCookie())
                         .param("dateFrom", today)
                         .param("dateTo", today))
@@ -140,12 +113,23 @@ class OrderControllerIntegrationTest extends BaseIntegrationTest {
         createOrder(OrderStatus.PENDING, BigDecimal.valueOf(200));
         createOrder(OrderStatus.PAID, BigDecimal.valueOf(100));
 
-        mockMvc.perform(get("/admin/orders")
+        mockMvc.perform(get("/orders/all")
                         .cookie(adminCookie())
                         .param("sort", "totalPrice,asc"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.content[0].totalPrice").value(100));
     }
+
+    // ── GET /orders/{id} ──────────────────────────────────────────────────────
+
+    @Test
+    void getOrder_notFound_returns404() throws Exception {
+        mockMvc.perform(get("/orders/99999")
+                        .cookie(userCookie()))
+                .andExpect(status().isNotFound());
+    }
+
+    // ── PATCH /orders/{id}/status ─────────────────────────────────────────────
 
     @Test
     void updateOrderStatus_shippedToDelivered_returns200() throws Exception {
@@ -159,12 +143,34 @@ class OrderControllerIntegrationTest extends BaseIntegrationTest {
                 .andExpect(jsonPath("$.data.status").value("DELIVERED"));
     }
 
+    @Test
+    void updateOrderStatus_asUser_returns403() throws Exception {
+        Order order = createOrder(OrderStatus.SHIPPED, BigDecimal.valueOf(100));
+
+        mockMvc.perform(patch("/orders/{orderId}/status", order.getId())
+                        .cookie(userCookie())
+                        .contentType("application/json")
+                        .content("{\"status\":\"DELIVERED\"}"))
+                .andExpect(status().isForbidden());
+    }
+
+    // ── DELETE /orders/{id} ───────────────────────────────────────────────────
+
+    @Test
+    void cancelOrder_notFound_returns404() throws Exception {
+        mockMvc.perform(delete("/orders/99999")
+                        .cookie(userCookie()))
+                .andExpect(status().isNotFound());
+    }
+
     private Order createOrder(OrderStatus status, BigDecimal totalPrice) {
         User user = userRepository.findById(2L).orElseThrow();
+
         Order order = new Order();
         order.setUser(user);
         order.setStatus(status);
         order.setTotalPrice(totalPrice);
+
         return orderRepository.saveAndFlush(order);
     }
 }

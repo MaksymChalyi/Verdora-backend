@@ -30,7 +30,6 @@ public class SecurityConfig {
                 .authorizeHttpRequests(
                         auth -> auth
                                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                                .requestMatchers(HttpMethod.GET, "/categories", "/categories/**").permitAll()
                                 .requestMatchers(
                                         "/auth/**",
                                         "/health/**",
@@ -40,9 +39,13 @@ public class SecurityConfig {
                                         "/oauth2/**",
                                         "/login/oauth2/**")
                                 .permitAll()
-                                .requestMatchers(HttpMethod.GET, "/products", "/products/**")
+                                .requestMatchers(
+                                        HttpMethod.GET,
+                                        "/categories",
+                                        "/categories/**",
+                                        "/products",
+                                        "/products/**")
                                 .permitAll()
-                                .requestMatchers("/admin", "/admin/**").hasRole("ADMIN")
                                 .anyRequest()
                                 .authenticated())
                 .exceptionHandling(ex -> ex

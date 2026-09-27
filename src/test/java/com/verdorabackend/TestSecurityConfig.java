@@ -51,14 +51,21 @@ public class TestSecurityConfig {
                 )
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers(HttpMethod.PUT, "/categories/**").hasRole("ADMIN")
                         .requestMatchers(
-                                "/auth/**", "/health/**",
-                                "/v3/api-docs/**", "/swagger-ui/**",
-                                "/categories/**", "/oauth2/**", "/login/oauth2/**"
+                                "/auth/**",
+                                "/health/**",
+                                "/v3/api-docs/**",
+                                "/swagger-ui/**",
+                                "/oauth2/**",
+                                "/login/oauth2/**"
                         ).permitAll()
-                        .requestMatchers(HttpMethod.GET, "/products", "/products/**").permitAll()
-                        .requestMatchers("/admin", "/admin/**").hasRole("ADMIN")
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/categories",
+                                "/categories/**",
+                                "/products",
+                                "/products/**"
+                        ).permitAll()
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(
