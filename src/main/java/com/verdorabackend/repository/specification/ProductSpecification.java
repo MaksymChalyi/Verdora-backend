@@ -1,4 +1,4 @@
-package com.verdorabackend.repository;
+package com.verdorabackend.repository.specification;
 
 import com.verdorabackend.entity.Product;
 import jakarta.persistence.criteria.Predicate;

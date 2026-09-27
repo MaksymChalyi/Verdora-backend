@@ -9,7 +9,7 @@ import com.verdorabackend.exception.ProductNotFoundException;
 import com.verdorabackend.mapper.ProductMapper;
 import com.verdorabackend.repository.CategoryRepository;
 import com.verdorabackend.repository.ProductRepository;
-import com.verdorabackend.repository.ProductSpecification;
+import com.verdorabackend.repository.specification.ProductSpecification;
 import com.verdorabackend.service.ProductService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

@@ -15,7 +15,7 @@ import com.verdorabackend.exception.OrderNotFoundException;
 import com.verdorabackend.mapper.OrderMapper;
 import com.verdorabackend.repository.CartRepository;
 import com.verdorabackend.repository.OrderRepository;
-import com.verdorabackend.repository.OrderSpecification;
+import com.verdorabackend.repository.specification.OrderSpecification;
 import com.verdorabackend.service.OrderService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
