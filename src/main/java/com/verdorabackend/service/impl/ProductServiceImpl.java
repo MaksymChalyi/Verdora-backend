@@ -5,6 +5,7 @@ import com.verdorabackend.dto.response.ProductResponse;
 import com.verdorabackend.entity.Category;
 import com.verdorabackend.entity.Product;
 import com.verdorabackend.exception.CategoryNotFoundException;
+import com.verdorabackend.exception.ProductDeletionException;
 import com.verdorabackend.exception.ProductNotFoundException;
 import com.verdorabackend.mapper.ProductMapper;
 import com.verdorabackend.repository.CategoryRepository;
@@ -13,6 +14,7 @@ import com.verdorabackend.repository.specification.ProductSpecification;
 import com.verdorabackend.service.ProductService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -91,7 +93,13 @@ public class ProductServiceImpl implements ProductService {
     public void deleteProduct(Long productId) {
         log.debug("Deleting product with id: {}", productId);
         Product product = getByIdOrThrow(productId);
-        productRepository.delete(product);
+        try {
+            productRepository.delete(product);
+            productRepository.flush();
+        } catch (DataIntegrityViolationException exception) {
+            log.warn("Product deletion blocked, id={}", productId);
+            throw new ProductDeletionException(productId);
+        }
         log.info("Product deleted, id={}", productId);
     }
 
