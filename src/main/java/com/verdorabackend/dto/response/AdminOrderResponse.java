@@ -15,13 +15,13 @@ public record AdminOrderResponse(
         @Schema(description = "Order creation timestamp", example = "2026-05-23T12:00:00Z")
         OffsetDateTime createdAt,
 
-        @Schema(description = "Customer")
-        UserResponse customer,
-
         @Schema(description = "Total price of the order", example = "1500.00")
         BigDecimal totalPrice,
 
         @Schema(description = "Order status", example = "PENDING")
-        OrderStatus status
+        OrderStatus status,
+
+        @Schema(description = "Customer")
+        UserResponse customer
 ) {
 }

@@ -27,7 +27,6 @@ public class CategoryServiceImpl implements CategoryService {
     @Transactional(readOnly = true)
     public Page<CategoryResponse> getAllCategories(Pageable pageable) {
         log.debug("Fetching categories with pagination: {}", pageable);
-
         return categoryRepository.findAll(pageable)
                 .map(categoryMapper::toResponse);
     }

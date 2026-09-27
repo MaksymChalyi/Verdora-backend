@@ -42,28 +42,32 @@ class CategoryControllerIntegrationTest extends BaseIntegrationTest {
                         .value("Category already exists, name=ЕлектронІКА"));
     }
 
-    // ── GET /admin/categories ────────────────────────────────────────────────
-
     @Test
-    void getAllCategories_asAdmin_returns200() throws Exception {
-        mockMvc.perform(get("/admin/categories")
-                        .cookie(adminCookie()))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data").isArray())
-                .andExpect(jsonPath("$.data.length()").value(3))
-                .andExpect(jsonPath("$.data[0].name").isNotEmpty());
-    }
+    void createCategory_asUser_returns403() throws Exception {
+        String body = """
+                {
+                  "name": "New Category"
+                }
+                """;
 
-    @Test
-    void getAllCategories_asUser_returns403() throws Exception {
-        mockMvc.perform(get("/admin/categories")
-                        .cookie(userCookie()))
+        mockMvc.perform(post("/categories")
+                        .cookie(userCookie())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
                 .andExpect(status().isForbidden());
     }
 
     @Test
-    void getAllCategories_withoutAuthentication_returns401() throws Exception {
-        mockMvc.perform(get("/admin/categories"))
+    void createCategory_withoutAuthentication_returns401() throws Exception {
+        String body = """
+                {
+                  "name": "New Category"
+                }
+                """;
+
+        mockMvc.perform(post("/categories")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
                 .andExpect(status().isUnauthorized());
     }
 
@@ -129,6 +133,19 @@ class CategoryControllerIntegrationTest extends BaseIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void updateCategory_withoutAuthentication_returns401() throws Exception {
+        String body = """
+                {
+                  "name": "Нова категорія"
+                }
+                """;
+        mockMvc.perform(put("/categories/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
@@ -211,6 +228,19 @@ class CategoryControllerIntegrationTest extends BaseIntegrationTest {
         mockMvc.perform(delete("/categories/" + categoryId)
                         .cookie(adminCookie()))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    void deleteCategory_asUser_returns403() throws Exception {
+        mockMvc.perform(delete("/categories/1")
+                        .cookie(userCookie()))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void deleteCategory_withoutAuthentication_returns401() throws Exception {
+        mockMvc.perform(delete("/categories/1"))
+                .andExpect(status().isUnauthorized());
     }
 
     @Test

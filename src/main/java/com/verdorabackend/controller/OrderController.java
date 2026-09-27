@@ -1,9 +1,11 @@
 package com.verdorabackend.controller;
 
 import com.verdorabackend.dto.request.UpdateOrderStatusRequest;
+import com.verdorabackend.dto.response.AdminOrderResponse;
 import com.verdorabackend.dto.response.BaseResponse;
 import com.verdorabackend.dto.response.BaseResponseFactory;
 import com.verdorabackend.dto.response.OrderResponse;
+import com.verdorabackend.entity.OrderStatus;
 import com.verdorabackend.security.UserPrincipal;
 import com.verdorabackend.service.OrderService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -14,12 +16,17 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -41,9 +48,7 @@ public class OrderController {
     public ResponseEntity<BaseResponse<OrderResponse>> placeOrder(
             @AuthenticationPrincipal UserPrincipal principal) {
         log.info("Request to place order for userId={}", principal.getUser().getId());
-
         OrderResponse response = orderService.placeOrder(principal.getUser().getId());
-
         return ResponseEntity.status(HttpStatus.CREATED).body(
                 BaseResponseFactory.success(HttpStatus.CREATED, "Order placed successfully", response)
         );
@@ -55,11 +60,30 @@ public class OrderController {
     public ResponseEntity<BaseResponse<List<OrderResponse>>> getOrders(
             @AuthenticationPrincipal UserPrincipal principal) {
         log.info("Request to get orders for userId={}", principal.getUser().getId());
-
         List<OrderResponse> response = orderService.getOrders(principal.getUser().getId());
-
         return ResponseEntity.ok(
                 BaseResponseFactory.success(HttpStatus.OK, "Orders fetched successfully", response)
+        );
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Get all orders", description = "Returns all orders with optional filters")
+    @ApiResponse(responseCode = "200", description = "Orders returned")
+    @GetMapping("/all")
+    public ResponseEntity<BaseResponse<Page<AdminOrderResponse>>> getAllOrders(
+            @RequestParam(required = false) OrderStatus status,
+            @RequestParam(required = false) LocalDate dateFrom,
+            @RequestParam(required = false) LocalDate dateTo,
+            @PageableDefault(size = 12, sort = "createdAt", direction = Sort.Direction.DESC)
+            Pageable pageable) {
+        log.info("Request to get all orders");
+        Page<AdminOrderResponse> response = orderService.getAllOrders(status, dateFrom, dateTo, pageable);
+        return ResponseEntity.ok(
+                BaseResponseFactory.success(
+                        HttpStatus.OK,
+                        "Orders fetched successfully",
+                        response
+                )
         );
     }
 
@@ -73,9 +97,7 @@ public class OrderController {
             @AuthenticationPrincipal UserPrincipal principal,
             @PathVariable Long orderId) {
         log.info("Request to get orderId={} for userId={}", orderId, principal.getUser().getId());
-
         OrderResponse response = orderService.getOrder(principal.getUser().getId(), orderId);
-
         return ResponseEntity.ok(
                 BaseResponseFactory.success(HttpStatus.OK, "Order fetched successfully", response)
         );
@@ -92,9 +114,7 @@ public class OrderController {
             @AuthenticationPrincipal UserPrincipal principal,
             @PathVariable Long orderId) {
         log.info("Request to cancel orderId={} for userId={}", orderId, principal.getUser().getId());
-
         OrderResponse response = orderService.cancelOrder(principal.getUser().getId(), orderId);
-
         return ResponseEntity.ok(
                 BaseResponseFactory.success(HttpStatus.OK, "Order cancelled successfully", response)
         );
@@ -111,9 +131,7 @@ public class OrderController {
             @PathVariable Long orderId,
             @RequestBody @Valid UpdateOrderStatusRequest request) {
         log.info("Request to update status for orderId={} to {}", orderId, request.status());
-
         OrderResponse response = orderService.updateOrderStatus(orderId, request);
-
         return ResponseEntity.ok(
                 BaseResponseFactory.success(HttpStatus.OK, "Order status updated", response)
         );

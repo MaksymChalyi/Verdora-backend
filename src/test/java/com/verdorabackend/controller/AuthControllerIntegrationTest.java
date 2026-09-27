@@ -17,7 +17,7 @@ class AuthControllerIntegrationTest extends BaseIntegrationTest {
         String body = """
                 {
                   "email": "admin@verdora.com",
-                  "password": "password"
+                  "password": "Password1!"
                 }
                 """;
 

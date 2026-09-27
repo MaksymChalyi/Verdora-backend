@@ -40,9 +40,7 @@ public class CategoryController {
     public ResponseEntity<BaseResponse<Page<CategoryResponse>>> getAllCategories(
             @PageableDefault(size = 12, sort = "id") Pageable pageable) {
         log.info("Request to get all categories");
-
         Page<CategoryResponse> response = categoryService.getAllCategories(pageable);
-
         return ResponseEntity.ok(
                 BaseResponseFactory.success(HttpStatus.OK, "Categories fetched successfully", response)
         );

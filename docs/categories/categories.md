@@ -2,14 +2,18 @@
 
 ## Overview
 
-CRUD endpoints for managing product categories. All endpoints are public (no authentication required).
+CRUD endpoints for managing product categories.
+
+Read operations are public.
+
+Create, update, and delete operations require authentication and the `ADMIN` role.
 
 ## Entity
 
 ```java
 Category {
-  id    Long    // auto-generated
-  name  String  // max 256 chars, required
+    id    Long    // auto-generated
+    name  String  // max 256 chars, required
 }
 ```
 
@@ -26,69 +30,71 @@ CREATE TABLE categories (
 
 | Method | Endpoint | Description | Auth |
 |---|---|---|---|
-| POST | `/categories` | Create category | ❌ |
-| PUT | `/categories/{id}` | Update category | ❌ |
-| DELETE | `/categories/{id}` | Delete category | ❌ |
+| GET | `/categories` | Get all categories | Public |
+| GET | `/categories/{id}` | Get category by ID | Public |
+| POST | `/categories` | Create category | ADMIN |
+| PUT | `/categories/{id}` | Update category | ADMIN |
+| DELETE | `/categories/{id}` | Delete category | ADMIN |
 
 ---
 
-### POST `/categories` — Create
+### GET `/categories` - Get all categories
 
-**Request body**
+Returns categories with pagination.
 
-```json
-{
-  "name": "Electronics"
-}
+Default page size: `12`.
+
+Default sorting: `id`.
+
+Example:
+
+```text
+GET /categories?page=0&size=12&sort=id
 ```
 
-| Field | Required | Validation |
-|---|---|---|
-| `name` | ✅ | not blank, max 256 chars |
-
-**Success response `201`**
-
-```json
-{
-  "timestamp": "2026-04-26T12:00:00Z",
-  "status": 201,
-  "message": "Category created",
-  "data": {
-    "categoryId": "1",
-    "category": "Electronics"
-  }
-}
-```
-
----
-
-### PUT `/categories/{id}` — Update
-
-**Path variable:** `id` — category ID
-
-**Request body**
-
-```json
-{
-  "name": "Home Appliances"
-}
-```
-
-**Success response `200`**
+Success response `200`
 
 ```json
 {
   "timestamp": "2026-04-26T12:00:00Z",
   "status": 200,
-  "message": "Category updated",
+  "message": "Categories fetched successfully",
   "data": {
-    "categoryId": "1",
-    "category": "Home Appliances"
+    "content": [
+      {
+        "categoryId": 1,
+        "name": "Electronics"
+      }
+    ],
+    "totalElements": 1,
+    "totalPages": 1,
+    "number": 0,
+    "size": 12
   }
 }
 ```
 
-**Error response `404`**
+---
+
+### GET `/categories/{id}` - Get category by ID
+
+Path variable: `id` - category ID
+
+Success response `200`
+
+```json
+{
+  "timestamp": "2026-04-26T12:00:00Z",
+  "status": 200,
+  "message": "Category fetched successfully",
+  "data": {
+    "categoryId": 1,
+    "name": "Electronics"
+  }
+}
+```
+
+Error response `404`
 
 ```json
 {
@@ -101,11 +107,139 @@ CREATE TABLE categories (
 
 ---
 
-### DELETE `/categories/{id}` — Delete
+### POST `/categories` - Create category
 
-**Path variable:** `id` — category ID
+Requires authentication with the `ADMIN` role.
 
-**Success response `200`**
+Request body:
+
+```json
+{
+  "name": "Electronics"
+}
+```
+
+| Field | Required | Validation |
+|---|---|---|
+| `name` | Yes | not blank, max 256 chars |
+
+Success response `201`
+
+```json
+{
+  "timestamp": "2026-04-26T12:00:00Z",
+  "status": 201,
+  "message": "Category created",
+  "data": {
+    "categoryId": 1,
+    "name": "Electronics"
+  }
+}
+```
+
+Error response `400`
+
+Returned when request validation fails, for example when `name` is blank or longer than 256 characters.
+
+Error response `401`
+
+Returned when authentication is missing.
+
+Error response `403`
+
+Returned when the authenticated user does not have the `ADMIN` role.
+
+Error response `409`
+
+Returned when a category with the same name already exists.
+
+Example:
+
+```json
+{
+  "timestamp": "2026-04-26T12:00:00Z",
+  "status": 409,
+  "message": "Category already exists, name=Electronics",
+  "data": null
+}
+```
+
+Category name duplicate checks are case-insensitive.
+
+---
+
+### PUT `/categories/{id}` - Update category
+
+Requires authentication with the `ADMIN` role.
+
+Path variable: `id` - category ID
+
+Request body:
+
+```json
+{
+  "name": "Home Appliances"
+}
+```
+
+| Field | Required | Validation |
+|---|---|---|
+| `name` | Yes | not blank, max 256 chars |
+
+Success response `200`
+
+```json
+{
+  "timestamp": "2026-04-26T12:00:00Z",
+  "status": 200,
+  "message": "Category updated",
+  "data": {
+    "categoryId": 1,
+    "name": "Home Appliances"
+  }
+}
+```
+
+Error response `400`
+
+Returned when request validation fails.
+
+Error response `401`
+
+Returned when authentication is missing.
+
+Error response `403`
+
+Returned when the authenticated user does not have the `ADMIN` role.
+
+Error response `404`
+
+```json
+{
+  "timestamp": "2026-04-26T12:00:00Z",
+  "status": 404,
+  "message": "Category with id 1 not found",
+  "data": null
+}
+```
+
+Error response `409`
+
+Returned when another category with the same name already exists.
+
+Category name duplicate checks are case-insensitive.
+
+Updating a category without changing its name is allowed.
+
+---
+
+### DELETE `/categories/{id}` - Delete category
+
+Requires authentication with the `ADMIN` role.
+
+Path variable: `id` - category ID
+
+Success response `200`
 
 ```json
 {
@@ -116,7 +250,15 @@ CREATE TABLE categories (
 }
 ```
 
-**Error response `404`**
+Error response `401`
+
+Returned when authentication is missing.
+
+Error response `403`
+
+Returned when the authenticated user does not have the `ADMIN` role.
+
+Error response `404`
 
 ```json
 {
@@ -126,6 +268,41 @@ CREATE TABLE categories (
   "data": null
 }
 ```
+
+---
+
+## Authorization
+
+Public endpoints:
+
+```text
+GET /categories
+GET /categories/{id}
+```
+
+ADMIN-only endpoints:
+
+```text
+POST /categories
+PUT /categories/{id}
+DELETE /categories/{id}
+```
+
+Method-level authorization is enforced with:
+
+```java
+@PreAuthorize("hasRole('ADMIN')")
+```
+
+Method security is enabled through:
+
+```java
+@EnableMethodSecurity
+```
+
+Protected endpoints use cookie-based authentication.
+
+`@SecurityRequirement(name = "Cookie-based Authentication")` documents authentication requirements in OpenAPI. Access control itself is enforced by Spring Security and `@PreAuthorize`.
 
 ---
 
@@ -140,7 +317,6 @@ sequenceDiagram
     participant CategoryMapper
 
     Client->>CategoryController: POST /categories { name }
-
     CategoryController->>CategoryServiceImpl: createCategory(request)
     CategoryServiceImpl->>CategoryMapper: toEntity(request)
     CategoryMapper-->>CategoryServiceImpl: Category entity
@@ -149,18 +325,22 @@ sequenceDiagram
     CategoryServiceImpl->>CategoryMapper: toResponse(saved)
     CategoryMapper-->>CategoryServiceImpl: CategoryResponse
     CategoryServiceImpl-->>CategoryController: CategoryResponse
-    CategoryController-->>Client: 201 { categoryId, category }
+    CategoryController-->>Client: 201 { categoryId, name }
 ```
 
 ## Key Components
 
 ### `CategoryMapper`
 
-MapStruct mapper — converts between `CategoryRequest` → `Category` entity → `CategoryResponse`. No manual mapping needed.
+MapStruct mapper that converts between `CategoryRequest`, `Category`, and `CategoryResponse`.
+
+```text
+CategoryRequest -> Category -> CategoryResponse
+```
 
 ### `CategoryServiceImpl#getByIdOrThrow`
 
-Reusable private method used by both `updateCategory` and `deleteCategory`:
+Reusable private method for operations that require an existing category.
 
 ```java
 private Category getByIdOrThrow(Long id) {
@@ -169,4 +349,6 @@ private Category getByIdOrThrow(Long id) {
 }
 ```
 
-If category is not found — throws `CategoryNotFoundException`, which is handled by `GlobalExceptionHandler` and returns `404`.
+If the category is not found, `CategoryNotFoundException` is thrown.
+
+`GlobalExceptionHandler` handles the exception and returns HTTP `404`.
