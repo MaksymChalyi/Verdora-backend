@@ -62,6 +62,44 @@ class ProductControllerIntegrationTest extends BaseIntegrationTest {
                 .andExpect(jsonPath("$.data.pageable.pageSize").value(5));
     }
 
+    @Test
+    void getProducts_sortByPriceDescending_returns200() throws Exception {
+        mockMvc.perform(get("/products?sort=price,desc"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void getProducts_sortByDateAdded_returns200() throws Exception {
+        mockMvc.perform(get("/products?sort=createdAt,desc"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void getProducts_sortByNameAscending_returns200() throws Exception {
+        mockMvc.perform(get("/products?sort=name,asc"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void getProducts_sortByNameDescending_returns200() throws Exception {
+        mockMvc.perform(get("/products?sort=name,desc"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void getProducts_noResults_returns200WithEmptyList() throws Exception {
+        mockMvc.perform(get("/products?search=THIS_PRODUCT_DOES_NOT_EXIST_123456"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content").isEmpty());
+    }
+
+    @Test
+    void getProducts_searchIsCaseInsensitive_returnsResults() throws Exception {
+        mockMvc.perform(get("/products?search=НОУТБУК"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content").isNotEmpty());
+    }
+
     // ── GET /products/{id} ────────────────────────────────────────────────────
 
     @Test
