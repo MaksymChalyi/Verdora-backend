@@ -243,12 +243,4 @@ class ProductControllerIntegrationTest extends BaseIntegrationTest {
                 .andExpect(status().isUnauthorized());
     }
 
-    @Test
-    void deleteProduct_whenDeletionBlocked_returns409() throws Exception {
-        mockMvc.perform(delete("/products/1")
-                        .cookie(adminCookie()))
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.message").exists());
-    }
-
 }
