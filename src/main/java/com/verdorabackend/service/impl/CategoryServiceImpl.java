@@ -43,6 +43,11 @@ public class CategoryServiceImpl implements CategoryService {
     @Transactional
     public CategoryResponse createCategory(CategoryRequest request) {
         log.debug("Creating category with name: {}", request.name());
+
+        if (categoryRepository.existsByNameIgnoreCase(request.name())) {
+            throw new CategoryAlreadyExistsException(request.name());
+        }
+
         Category category = categoryMapper.toEntity(request);
         Category saved = categoryRepository.save(category);
         log.info("Category created, id={}", saved.getId());

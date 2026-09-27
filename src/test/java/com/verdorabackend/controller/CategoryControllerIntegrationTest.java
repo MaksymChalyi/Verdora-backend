@@ -23,6 +23,25 @@ class CategoryControllerIntegrationTest extends BaseIntegrationTest {
                 .andExpect(jsonPath("$.data.size").value(12));
     }
 
+    // ── POST /categories ──────────────────────────────────────────────────────
+
+    @Test
+    void createCategory_duplicateNameIgnoreCase_returns409() throws Exception {
+        String body = """
+                {
+                  "name": "ЕлектронІКА"
+                }
+                """;
+
+        mockMvc.perform(post("/categories")
+                        .cookie(adminCookie())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message")
+                        .value("Category already exists, name=ЕлектронІКА"));
+    }
+
     // ── GET /admin/categories ────────────────────────────────────────────────
 
     @Test
