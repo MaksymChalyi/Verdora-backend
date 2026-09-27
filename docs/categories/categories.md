@@ -6,7 +6,7 @@ CRUD endpoints for managing product categories.
 
 Read operations are public.
 
-Create, update, and delete operations require the `ADMIN` role.
+Create, update, and delete operations require authentication and the `ADMIN` role.
 
 ## Entity
 
@@ -38,7 +38,7 @@ CREATE TABLE categories (
 
 ---
 
-### GET `/categories` — Get all categories
+### GET `/categories` - Get all categories
 
 Returns categories with pagination.
 
@@ -52,7 +52,7 @@ Example:
 GET /categories?page=0&size=12&sort=id
 ```
 
-**Success response `200`**
+Success response `200`
 
 ```json
 {
@@ -66,23 +66,21 @@ GET /categories?page=0&size=12&sort=id
         "name": "Electronics"
       }
     ],
-    "page": {
-      "size": 12,
-      "number": 0,
-      "totalElements": 1,
-      "totalPages": 1
-    }
+    "totalElements": 1,
+    "totalPages": 1,
+    "number": 0,
+    "size": 12
   }
 }
 ```
 
 ---
 
-### GET `/categories/{id}` — Get by ID
+### GET `/categories/{id}` - Get category by ID
 
-**Path variable:** `id` — category ID
+Path variable: `id` - category ID
 
-**Success response `200`**
+Success response `200`
 
 ```json
 {
@@ -96,7 +94,7 @@ GET /categories?page=0&size=12&sort=id
 }
 ```
 
-**Error response `404`**
+Error response `404`
 
 ```json
 {
@@ -109,11 +107,11 @@ GET /categories?page=0&size=12&sort=id
 
 ---
 
-### POST `/categories` — Create
+### POST `/categories` - Create category
 
 Requires authentication with the `ADMIN` role.
 
-**Request body**
+Request body:
 
 ```json
 {
@@ -123,9 +121,9 @@ Requires authentication with the `ADMIN` role.
 
 | Field | Required | Validation |
 |---|---|---|
-| `name` | ✅ | not blank, max 256 chars |
+| `name` | Yes | not blank, max 256 chars |
 
-**Success response `201`**
+Success response `201`
 
 ```json
 {
@@ -139,19 +137,44 @@ Requires authentication with the `ADMIN` role.
 }
 ```
 
-**Error response `403`**
+Error response `400`
+
+Returned when request validation fails, for example when `name` is blank or longer than 256 characters.
+
+Error response `401`
+
+Returned when authentication is missing.
+
+Error response `403`
 
 Returned when the authenticated user does not have the `ADMIN` role.
 
+Error response `409`
+
+Returned when a category with the same name already exists.
+
+Example:
+
+```json
+{
+  "timestamp": "2026-04-26T12:00:00Z",
+  "status": 409,
+  "message": "Category already exists, name=Electronics",
+  "data": null
+}
+```
+
+Category name duplicate checks are case-insensitive.
+
 ---
 
-### PUT `/categories/{id}` — Update
+### PUT `/categories/{id}` - Update category
 
 Requires authentication with the `ADMIN` role.
 
-**Path variable:** `id` — category ID
+Path variable: `id` - category ID
 
-**Request body**
+Request body:
 
 ```json
 {
@@ -159,7 +182,11 @@ Requires authentication with the `ADMIN` role.
 }
 ```
 
-**Success response `200`**
+| Field | Required | Validation |
+|---|---|---|
+| `name` | Yes | not blank, max 256 chars |
+
+Success response `200`
 
 ```json
 {
@@ -173,7 +200,19 @@ Requires authentication with the `ADMIN` role.
 }
 ```
 
-**Error response `404`**
+Error response `400`
+
+Returned when request validation fails.
+
+Error response `401`
+
+Returned when authentication is missing.
+
+Error response `403`
+
+Returned when the authenticated user does not have the `ADMIN` role.
+
+Error response `404`
 
 ```json
 {
@@ -184,19 +223,23 @@ Requires authentication with the `ADMIN` role.
 }
 ```
 
-**Error response `403`**
+Error response `409`
 
-Returned when the authenticated user does not have the `ADMIN` role.
+Returned when another category with the same name already exists.
+
+Category name duplicate checks are case-insensitive.
+
+Updating a category without changing its name is allowed.
 
 ---
 
-### DELETE `/categories/{id}` — Delete
+### DELETE `/categories/{id}` - Delete category
 
 Requires authentication with the `ADMIN` role.
 
-**Path variable:** `id` — category ID
+Path variable: `id` - category ID
 
-**Success response `200`**
+Success response `200`
 
 ```json
 {
@@ -207,7 +250,15 @@ Requires authentication with the `ADMIN` role.
 }
 ```
 
-**Error response `404`**
+Error response `401`
+
+Returned when authentication is missing.
+
+Error response `403`
+
+Returned when the authenticated user does not have the `ADMIN` role.
+
+Error response `404`
 
 ```json
 {
@@ -218,22 +269,18 @@ Requires authentication with the `ADMIN` role.
 }
 ```
 
-**Error response `403`**
-
-Returned when the authenticated user does not have the `ADMIN` role.
-
 ---
 
 ## Authorization
 
-The following endpoints are public:
+Public endpoints:
 
 ```text
 GET /categories
 GET /categories/{id}
 ```
 
-The following endpoints require the `ADMIN` role:
+ADMIN-only endpoints:
 
 ```text
 POST /categories
@@ -241,13 +288,21 @@ PUT /categories/{id}
 DELETE /categories/{id}
 ```
 
-Authorization is enforced with:
+Method-level authorization is enforced with:
 
 ```java
 @PreAuthorize("hasRole('ADMIN')")
 ```
 
+Method security is enabled through:
+
+```java
+@EnableMethodSecurity
+```
+
 Protected endpoints use cookie-based authentication.
+
+`@SecurityRequirement(name = "Cookie-based Authentication")` documents authentication requirements in OpenAPI. Access control itself is enforced by Spring Security and `@PreAuthorize`.
 
 ---
 
@@ -262,7 +317,6 @@ sequenceDiagram
     participant CategoryMapper
 
     Client->>CategoryController: POST /categories { name }
-
     CategoryController->>CategoryServiceImpl: createCategory(request)
     CategoryServiceImpl->>CategoryMapper: toEntity(request)
     CategoryMapper-->>CategoryServiceImpl: Category entity
@@ -281,12 +335,12 @@ sequenceDiagram
 MapStruct mapper that converts between `CategoryRequest`, `Category`, and `CategoryResponse`.
 
 ```text
-CategoryRequest → Category → CategoryResponse
+CategoryRequest -> Category -> CategoryResponse
 ```
 
 ### `CategoryServiceImpl#getByIdOrThrow`
 
-Reusable private method used when a category must exist before an operation is performed.
+Reusable private method for operations that require an existing category.
 
 ```java
 private Category getByIdOrThrow(Long id) {
