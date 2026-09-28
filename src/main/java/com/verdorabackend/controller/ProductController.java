@@ -158,4 +158,29 @@ public class ProductController {
                 BaseResponseFactory.success(HttpStatus.OK, "Product deleted successfully")
         );
     }
+
+    @Operation(
+            summary = "Get product of the day",
+            description = "Returns a random product among products with the highest discount percentage"
+    )
+    @ApiResponse(
+            responseCode = "200",
+            description = "Product of the day returned"
+    )
+    @GetMapping("/product-of-the-day")
+    public ResponseEntity<BaseResponse<ProductResponse>> getProductOfTheDay() {
+        log.info("Request to get product of the day");
+
+        ProductResponse response = productService.getProductOfTheDay()
+                .orElse(null);
+
+        return ResponseEntity.ok(
+                BaseResponseFactory.success(
+                        HttpStatus.OK,
+                        "Product of the day fetched successfully",
+                        response
+                )
+        );
+    }
+
 }

@@ -1,6 +1,7 @@
 package com.verdorabackend.service;
 
 import com.verdorabackend.dto.request.UpdateOrderStatusRequest;
+import com.verdorabackend.dto.response.AdminOrderDetailsResponse;
 import com.verdorabackend.dto.response.AdminOrderResponse;
 import com.verdorabackend.dto.response.OrderResponse;
 import com.verdorabackend.entity.OrderStatus;
@@ -30,4 +31,6 @@ public interface OrderService {
     OrderResponse cancelOrder(Long userId, Long orderId);
 
     OrderResponse updateOrderStatus(Long orderId, UpdateOrderStatusRequest request);
+
+    AdminOrderDetailsResponse getOrderDetails(Long orderId);
 }

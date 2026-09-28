@@ -7,6 +7,6 @@
 -- Admin account was created in the original admin seed migration.
 
 UPDATE users
-SET password_hash = '$2a$10$KPoH51KvI/b2pAsnjF4.1.0PXJt/TKLF9ZnCjxO7po/DR97AMqxpO',
+SET password_hash = '$2a$10$lX3vBuJVt5pu4y9z5HDoN.XkhZoa7Q53dJ3QeB3kV/70yKGGC8fDe',
     updated_at = NOW()
 WHERE email = 'admin@verdora.com';

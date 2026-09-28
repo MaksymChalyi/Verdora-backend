@@ -20,7 +20,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.ThreadLocalRandom;
 import java.math.BigDecimal;
 
 @Service
@@ -101,6 +103,50 @@ public class ProductServiceImpl implements ProductService {
             throw new ProductDeletionException(productId);
         }
         log.info("Product deleted, id={}", productId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<ProductResponse> getProductOfTheDay() {
+        List<Product> discountedProducts = productRepository.findDiscountedProducts();
+
+        if (discountedProducts.isEmpty()) {
+            return Optional.empty();
+        }
+
+        Product selected = discountedProducts.getFirst();
+        int equalBestCount = 1;
+
+        for (int i = 1; i < discountedProducts.size(); i++) {
+            Product current = discountedProducts.get(i);
+
+            int comparison = compareDiscountPercentage(current, selected);
+
+            if (comparison > 0) {
+                selected = current;
+                equalBestCount = 1;
+            } else if (comparison == 0) {
+                equalBestCount++;
+
+                if (ThreadLocalRandom.current().nextInt(equalBestCount) == 0) {
+                    selected = current;
+                }
+            }
+        }
+
+        return Optional.of(productMapper.toResponse(selected));
+    }
+
+    private int compareDiscountPercentage(Product first, Product second) {
+        BigDecimal firstDiscount = first.getPrice()
+                .subtract(first.getDiscountPrice())
+                .multiply(second.getPrice());
+
+        BigDecimal secondDiscount = second.getPrice()
+                .subtract(second.getDiscountPrice())
+                .multiply(first.getPrice());
+
+        return firstDiscount.compareTo(secondDiscount);
     }
 
     private Product getByIdOrThrow(Long id) {
