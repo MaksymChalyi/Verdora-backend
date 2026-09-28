@@ -249,4 +249,15 @@ class CategoryControllerIntegrationTest extends BaseIntegrationTest {
                         .cookie(adminCookie()))
                 .andExpect(status().isNotFound());
     }
+
+    @Test
+    void deleteCategory_inUse_returns409() throws Exception {
+        mockMvc.perform(delete("/categories/1")
+                        .cookie(adminCookie()))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message")
+                        .value(org.hamcrest.Matchers.containsString(
+                                "Category cannot be deleted"
+                        )));
+    }
 }
