@@ -181,15 +181,15 @@ class ProductControllerIntegrationTest extends BaseIntegrationTest {
     @Test
     void createProduct_asUser_returns403() throws Exception {
         String body = """
-            {
-              "name": "Test Product",
-              "description": "Description",
-              "price": 1000,
-              "categoryId": 1,
-              "imageUrl": "https://example.com/image.jpg",
-              "discountPrice": 900
-            }
-            """;
+                {
+                  "name": "Test Product",
+                  "description": "Description",
+                  "price": 1000,
+                  "categoryId": 1,
+                  "imageUrl": "https://example.com/image.jpg",
+                  "discountPrice": 900
+                }
+                """;
 
         mockMvc.perform(post("/products")
                         .cookie(userCookie())
@@ -201,13 +201,13 @@ class ProductControllerIntegrationTest extends BaseIntegrationTest {
     @Test
     void createProduct_missingRequiredFields_returns400() throws Exception {
         String body = """
-            {
-              "name": "",
-              "price": null,
-              "categoryId": null,
-              "imageUrl": ""
-            }
-            """;
+                {
+                  "name": "",
+                  "price": null,
+                  "categoryId": null,
+                  "imageUrl": ""
+                }
+                """;
 
         mockMvc.perform(post("/products")
                         .cookie(adminCookie())
@@ -219,14 +219,14 @@ class ProductControllerIntegrationTest extends BaseIntegrationTest {
     @Test
     void createProduct_discountPriceNotLowerThanPrice_returns400() throws Exception {
         String body = """
-            {
-              "name": "Test Product",
-              "price": 1000,
-              "categoryId": 1,
-              "imageUrl": "https://example.com/image.jpg",
-              "discountPrice": 1000
-            }
-            """;
+                {
+                  "name": "Test Product",
+                  "price": 1000,
+                  "categoryId": 1,
+                  "imageUrl": "https://example.com/image.jpg",
+                  "discountPrice": 1000
+                }
+                """;
 
         mockMvc.perform(post("/products")
                         .cookie(adminCookie())
@@ -242,13 +242,13 @@ class ProductControllerIntegrationTest extends BaseIntegrationTest {
     @Test
     void createProduct_withoutOptionalFields_returns201() throws Exception {
         String body = """
-            {
-              "name": "Product Without Discount",
-              "price": 1000,
-              "categoryId": 1,
-              "imageUrl": "https://example.com/image.jpg"
-            }
-            """;
+                {
+                  "name": "Product Without Discount",
+                  "price": 1000,
+                  "categoryId": 1,
+                  "imageUrl": "https://example.com/image.jpg"
+                }
+                """;
 
         mockMvc.perform(post("/products")
                         .cookie(adminCookie())
@@ -312,15 +312,15 @@ class ProductControllerIntegrationTest extends BaseIntegrationTest {
     @Test
     void updateProduct_asUser_returns403() throws Exception {
         String body = """
-            {
-              "name": "Updated Product",
-              "description": "Description",
-              "price": 1000.00,
-              "categoryId": 1,
-              "imageUrl": "https://example.com/image.jpg",
-              "discountPrice": 900.00
-            }
-            """;
+                {
+                  "name": "Updated Product",
+                  "description": "Description",
+                  "price": 1000.00,
+                  "categoryId": 1,
+                  "imageUrl": "https://example.com/image.jpg",
+                  "discountPrice": 900.00
+                }
+                """;
 
         mockMvc.perform(put("/products/1")
                         .cookie(userCookie())
@@ -332,15 +332,15 @@ class ProductControllerIntegrationTest extends BaseIntegrationTest {
     @Test
     void updateProduct_withoutAuthentication_returns401() throws Exception {
         String body = """
-            {
-              "name": "Updated Product",
-              "description": "Description",
-              "price": 1000.00,
-              "categoryId": 1,
-              "imageUrl": "https://example.com/image.jpg",
-              "discountPrice": 900.00
-            }
-            """;
+                {
+                  "name": "Updated Product",
+                  "description": "Description",
+                  "price": 1000.00,
+                  "categoryId": 1,
+                  "imageUrl": "https://example.com/image.jpg",
+                  "discountPrice": 900.00
+                }
+                """;
 
         mockMvc.perform(put("/products/1")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -351,13 +351,13 @@ class ProductControllerIntegrationTest extends BaseIntegrationTest {
     @Test
     void updateProduct_missingName_returns400() throws Exception {
         String body = """
-            {
-              "name": "",
-              "price": 1000,
-              "categoryId": 1,
-              "imageUrl": "https://example.com/image.jpg"
-            }
-            """;
+                {
+                  "name": "",
+                  "price": 1000,
+                  "categoryId": 1,
+                  "imageUrl": "https://example.com/image.jpg"
+                }
+                """;
 
         mockMvc.perform(put("/products/1")
                         .cookie(adminCookie())
@@ -370,13 +370,13 @@ class ProductControllerIntegrationTest extends BaseIntegrationTest {
     @Test
     void updateProduct_missingPrice_returns400() throws Exception {
         String body = """
-            {
-              "name": "Product",
-              "price": null,
-              "categoryId": 1,
-              "imageUrl": "https://example.com/image.jpg"
-            }
-            """;
+                {
+                  "name": "Product",
+                  "price": null,
+                  "categoryId": 1,
+                  "imageUrl": "https://example.com/image.jpg"
+                }
+                """;
 
         mockMvc.perform(put("/products/1")
                         .cookie(adminCookie())
@@ -389,13 +389,13 @@ class ProductControllerIntegrationTest extends BaseIntegrationTest {
     @Test
     void updateProduct_missingCategory_returns400() throws Exception {
         String body = """
-            {
-              "name": "Product",
-              "price": 1000,
-              "categoryId": null,
-              "imageUrl": "https://example.com/image.jpg"
-            }
-            """;
+                {
+                  "name": "Product",
+                  "price": 1000,
+                  "categoryId": null,
+                  "imageUrl": "https://example.com/image.jpg"
+                }
+                """;
 
         mockMvc.perform(put("/products/1")
                         .cookie(adminCookie())
@@ -408,13 +408,13 @@ class ProductControllerIntegrationTest extends BaseIntegrationTest {
     @Test
     void updateProduct_missingImage_returns400() throws Exception {
         String body = """
-            {
-              "name": "Product",
-              "price": 1000,
-              "categoryId": 1,
-              "imageUrl": ""
-            }
-            """;
+                {
+                  "name": "Product",
+                  "price": 1000,
+                  "categoryId": 1,
+                  "imageUrl": ""
+                }
+                """;
 
         mockMvc.perform(put("/products/1")
                         .cookie(adminCookie())
@@ -427,15 +427,15 @@ class ProductControllerIntegrationTest extends BaseIntegrationTest {
     @Test
     void updateProduct_discountPriceNotLowerThanPrice_returns400() throws Exception {
         String body = """
-            {
-              "name": "Updated Product",
-              "description": "Description",
-              "price": 1000.00,
-              "categoryId": 1,
-              "imageUrl": "https://example.com/image.jpg",
-              "discountPrice": 1000.00
-            }
-            """;
+                {
+                  "name": "Updated Product",
+                  "description": "Description",
+                  "price": 1000.00,
+                  "categoryId": 1,
+                  "imageUrl": "https://example.com/image.jpg",
+                  "discountPrice": 1000.00
+                }
+                """;
 
         mockMvc.perform(put("/products/1")
                         .cookie(adminCookie())
@@ -525,15 +525,15 @@ class ProductControllerIntegrationTest extends BaseIntegrationTest {
     @Test
     void updateProduct_categoryNotFound_returns404() throws Exception {
         String body = """
-            {
-              "name": "Updated Product",
-              "description": "Description",
-              "price": 1000.00,
-              "categoryId": 99999,
-              "imageUrl": "https://example.com/image.jpg",
-              "discountPrice": 900.00
-            }
-            """;
+                {
+                  "name": "Updated Product",
+                  "description": "Description",
+                  "price": 1000.00,
+                  "categoryId": 99999,
+                  "imageUrl": "https://example.com/image.jpg",
+                  "discountPrice": 900.00
+                }
+                """;
 
         mockMvc.perform(put("/products/1")
                         .cookie(adminCookie())
@@ -545,15 +545,15 @@ class ProductControllerIntegrationTest extends BaseIntegrationTest {
     @Test
     void updateProduct_multipleCategories_returns400() throws Exception {
         String body = """
-            {
-              "name": "Updated Product",
-              "description": "Description",
-              "price": 1000.00,
-              "categoryId": [1, 2],
-              "imageUrl": "https://example.com/image.jpg",
-              "discountPrice": 900.00
-            }
-            """;
+                {
+                  "name": "Updated Product",
+                  "description": "Description",
+                  "price": 1000.00,
+                  "categoryId": [1, 2],
+                  "imageUrl": "https://example.com/image.jpg",
+                  "discountPrice": 900.00
+                }
+                """;
 
         mockMvc.perform(put("/products/1")
                         .cookie(adminCookie())
@@ -565,13 +565,13 @@ class ProductControllerIntegrationTest extends BaseIntegrationTest {
     @Test
     void updateProduct_withoutOptionalFields_returns200() throws Exception {
         String body = """
-            {
-              "name": "Updated Without Optional Fields",
-              "price": 1000.00,
-              "categoryId": 1,
-              "imageUrl": "https://example.com/image.jpg"
-            }
-            """;
+                {
+                  "name": "Updated Without Optional Fields",
+                  "price": 1000.00,
+                  "categoryId": 1,
+                  "imageUrl": "https://example.com/image.jpg"
+                }
+                """;
 
         mockMvc.perform(put("/products/1")
                         .cookie(adminCookie())
@@ -649,7 +649,45 @@ class ProductControllerIntegrationTest extends BaseIntegrationTest {
 
     @Test
     void deleteProduct_inUse_returns409() throws Exception {
-        mockMvc.perform(delete("/products/1")
+        String createBody = """
+                {
+                  "name": "Product In Use",
+                  "description": "Used in cart",
+                  "price": 100.00,
+                  "categoryId": 1,
+                  "imageUrl": "https://example.com/image.jpg",
+                  "discountPrice": 90.00
+                }
+                """;
+
+        String result = mockMvc.perform(post("/products")
+                        .cookie(adminCookie())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(createBody))
+                .andExpect(status().isCreated())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        long productId = objectMapper.readTree(result)
+                .path("data")
+                .path("productId")
+                .asLong();
+
+        String cartBody = """
+                {
+                  "productId": %d,
+                  "quantity": 1
+                }
+                """.formatted(productId);
+
+        mockMvc.perform(post("/cart/items")
+                        .cookie(userCookie())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(cartBody))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(delete("/products/{id}", productId)
                         .cookie(adminCookie()))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.message")
