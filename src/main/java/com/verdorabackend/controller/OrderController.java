@@ -1,10 +1,7 @@
 package com.verdorabackend.controller;
 
 import com.verdorabackend.dto.request.UpdateOrderStatusRequest;
-import com.verdorabackend.dto.response.AdminOrderResponse;
-import com.verdorabackend.dto.response.BaseResponse;
-import com.verdorabackend.dto.response.BaseResponseFactory;
-import com.verdorabackend.dto.response.OrderResponse;
+import com.verdorabackend.dto.response.*;
 import com.verdorabackend.entity.OrderStatus;
 import com.verdorabackend.security.UserPrincipal;
 import com.verdorabackend.service.OrderService;
@@ -82,6 +79,34 @@ public class OrderController {
                 BaseResponseFactory.success(
                         HttpStatus.OK,
                         "Orders fetched successfully",
+                        response
+                )
+        );
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(
+            summary = "Get order details",
+            description = "Returns full order details for admin"
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Order details returned"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "403", description = "Forbidden"),
+            @ApiResponse(responseCode = "404", description = "Order not found")
+    })
+    @GetMapping("/{orderId}/details")
+    public ResponseEntity<BaseResponse<AdminOrderDetailsResponse>> getOrderDetails(
+            @PathVariable Long orderId) {
+
+        log.info("Admin request to get order details, orderId={}", orderId);
+
+        AdminOrderDetailsResponse response = orderService.getOrderDetails(orderId);
+
+        return ResponseEntity.ok(
+                BaseResponseFactory.success(
+                        HttpStatus.OK,
+                        "Order details fetched successfully",
                         response
                 )
         );

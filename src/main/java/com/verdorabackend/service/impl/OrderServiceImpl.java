@@ -1,10 +1,7 @@
 package com.verdorabackend.service.impl;
 
 import com.verdorabackend.dto.request.UpdateOrderStatusRequest;
-import com.verdorabackend.dto.response.AdminOrderResponse;
-import com.verdorabackend.dto.response.OrderItemResponse;
-import com.verdorabackend.dto.response.OrderResponse;
-import com.verdorabackend.dto.response.UserResponse;
+import com.verdorabackend.dto.response.*;
 import com.verdorabackend.entity.Cart;
 import com.verdorabackend.entity.Order;
 import com.verdorabackend.entity.OrderItem;
@@ -155,6 +152,29 @@ public class OrderServiceImpl implements OrderService {
         Order saved = orderRepository.save(order);
         log.info("Order status updated, id={}, status={}", orderId, request.status());
         return buildOrderResponse(saved);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public AdminOrderDetailsResponse getOrderDetails(Long orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new OrderNotFoundException(orderId));
+
+        return buildAdminOrderDetailsResponse(order);
+    }
+
+    private AdminOrderDetailsResponse buildAdminOrderDetailsResponse(Order order) {
+        OrderResponse orderResponse = buildOrderResponse(order);
+        AdminOrderResponse adminOrderResponse = buildAdminOrderResponse(order);
+
+        return new AdminOrderDetailsResponse(
+                orderResponse.orderId(),
+                orderResponse.createdAt(),
+                orderResponse.totalPrice(),
+                orderResponse.status(),
+                adminOrderResponse.customer(),
+                orderResponse.items()
+        );
     }
 
     private AdminOrderResponse buildAdminOrderResponse(Order order) {

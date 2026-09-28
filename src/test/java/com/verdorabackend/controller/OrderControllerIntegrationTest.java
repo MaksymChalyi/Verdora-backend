@@ -129,6 +129,48 @@ class OrderControllerIntegrationTest extends BaseIntegrationTest {
                 .andExpect(status().isNotFound());
     }
 
+    // ── GET /orders/{id}/details ────────────────────────────────────────────────
+
+    @Test
+    void getOrderDetails_asAdmin_returns200() throws Exception {
+        Order order = createOrder(OrderStatus.PAID, BigDecimal.valueOf(200));
+
+        mockMvc.perform(get("/orders/{orderId}/details", order.getId())
+                        .cookie(adminCookie()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.orderId").value(order.getId()))
+                .andExpect(jsonPath("$.data.createdAt").exists())
+                .andExpect(jsonPath("$.data.totalPrice").value(200))
+                .andExpect(jsonPath("$.data.status").value("PAID"))
+                .andExpect(jsonPath("$.data.customer").exists())
+                .andExpect(jsonPath("$.data.customer.id").value(2))
+                .andExpect(jsonPath("$.data.customer.name").exists())
+                .andExpect(jsonPath("$.data.customer.email").exists())
+                .andExpect(jsonPath("$.data.items").isArray());
+    }
+
+    @Test
+    void getOrderDetails_notFound_returns404() throws Exception {
+        mockMvc.perform(get("/orders/99999/details")
+                        .cookie(adminCookie()))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void getOrderDetails_asUser_returns403() throws Exception {
+        Order order = createOrder(OrderStatus.PAID, BigDecimal.valueOf(200));
+
+        mockMvc.perform(get("/orders/{orderId}/details", order.getId())
+                        .cookie(userCookie()))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void getOrderDetails_withoutAuthentication_returns401() throws Exception {
+        mockMvc.perform(get("/orders/99999/details"))
+                .andExpect(status().isUnauthorized());
+    }
+
     // ── PATCH /orders/{id}/status ─────────────────────────────────────────────
 
     @Test
