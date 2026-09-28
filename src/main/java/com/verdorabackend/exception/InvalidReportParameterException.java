@@ -5,6 +5,10 @@ import org.springframework.http.HttpStatus;
 public class InvalidReportParameterException extends BaseException {
 
     public InvalidReportParameterException() {
-        super(HttpStatus.BAD_REQUEST, "Parameter 'n' must be a positive integer");
+        this("Parameter 'n' must be a positive integer");
+    }
+
+    public InvalidReportParameterException(String message) {
+        super(HttpStatus.BAD_REQUEST, message);
     }
 }

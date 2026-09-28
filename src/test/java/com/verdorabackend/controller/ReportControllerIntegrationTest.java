@@ -318,6 +318,289 @@ class ReportControllerIntegrationTest extends BaseIntegrationTest {
                 .andExpect(status().isUnauthorized());
     }
 
+    // ── GET /reports/revenue ───────────────────────────────────────────────────
+
+    @Test
+    void getRevenueReport_groupByDay_returnsRevenueGroupedByDay()
+            throws Exception {
+
+        clearOrders();
+
+        createOrder(
+                "PAID",
+                BigDecimal.valueOf(100),
+                OffsetDateTime.parse("2026-09-10T10:00:00+03:00")
+        );
+        createOrder(
+                "SHIPPED",
+                BigDecimal.valueOf(200),
+                OffsetDateTime.parse("2026-09-10T15:00:00+03:00")
+        );
+        createOrder(
+                "DELIVERED",
+                BigDecimal.valueOf(400),
+                OffsetDateTime.parse("2026-09-11T12:00:00+03:00")
+        );
+
+        mockMvc.perform(get("/reports/revenue")
+                        .cookie(adminCookie())
+                        .param("dateFrom", "2026-09-10")
+                        .param("dateTo", "2026-09-11")
+                        .param("groupBy", "DAY"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data").isArray())
+                .andExpect(jsonPath("$.data.length()").value(2))
+                .andExpect(jsonPath("$.data[0].revenue").value(300))
+                .andExpect(jsonPath("$.data[1].revenue").value(400));
+    }
+
+    @Test
+    void getRevenueReport_groupByHour_returnsRevenueGroupedByHour()
+            throws Exception {
+
+        clearOrders();
+
+        createOrder(
+                "PAID",
+                BigDecimal.valueOf(100),
+                OffsetDateTime.parse("2026-09-10T10:15:00+03:00")
+        );
+        createOrder(
+                "PAID",
+                BigDecimal.valueOf(150),
+                OffsetDateTime.parse("2026-09-10T10:45:00+03:00")
+        );
+        createOrder(
+                "SHIPPED",
+                BigDecimal.valueOf(300),
+                OffsetDateTime.parse("2026-09-10T11:10:00+03:00")
+        );
+
+        mockMvc.perform(get("/reports/revenue")
+                        .cookie(adminCookie())
+                        .param("dateFrom", "2026-09-10")
+                        .param("dateTo", "2026-09-10")
+                        .param("groupBy", "HOUR"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.length()").value(2))
+                .andExpect(jsonPath("$.data[0].revenue").value(250))
+                .andExpect(jsonPath("$.data[1].revenue").value(300));
+    }
+
+    @Test
+    void getRevenueReport_groupByWeek_returnsRevenueGroupedByWeek()
+            throws Exception {
+
+        clearOrders();
+
+        createOrder(
+                "PAID",
+                BigDecimal.valueOf(100),
+                OffsetDateTime.parse("2026-09-07T10:00:00+03:00")
+        );
+        createOrder(
+                "DELIVERED",
+                BigDecimal.valueOf(200),
+                OffsetDateTime.parse("2026-09-10T10:00:00+03:00")
+        );
+        createOrder(
+                "PAID",
+                BigDecimal.valueOf(500),
+                OffsetDateTime.parse("2026-09-14T10:00:00+03:00")
+        );
+
+        mockMvc.perform(get("/reports/revenue")
+                        .cookie(adminCookie())
+                        .param("dateFrom", "2026-09-07")
+                        .param("dateTo", "2026-09-14")
+                        .param("groupBy", "WEEK"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.length()").value(2))
+                .andExpect(jsonPath("$.data[0].revenue").value(300))
+                .andExpect(jsonPath("$.data[1].revenue").value(500));
+    }
+
+    @Test
+    void getRevenueReport_groupByMonth_returnsRevenueGroupedByMonth()
+            throws Exception {
+
+        clearOrders();
+
+        createOrder(
+                "PAID",
+                BigDecimal.valueOf(100),
+                OffsetDateTime.parse("2026-08-10T10:00:00+03:00")
+        );
+        createOrder(
+                "SHIPPED",
+                BigDecimal.valueOf(200),
+                OffsetDateTime.parse("2026-08-20T10:00:00+03:00")
+        );
+        createOrder(
+                "DELIVERED",
+                BigDecimal.valueOf(500),
+                OffsetDateTime.parse("2026-09-05T10:00:00+03:00")
+        );
+
+        mockMvc.perform(get("/reports/revenue")
+                        .cookie(adminCookie())
+                        .param("dateFrom", "2026-08-01")
+                        .param("dateTo", "2026-09-30")
+                        .param("groupBy", "MONTH"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.length()").value(2))
+                .andExpect(jsonPath("$.data[0].revenue").value(300))
+                .andExpect(jsonPath("$.data[1].revenue").value(500));
+    }
+
+    @Test
+    void getRevenueReport_ignoresPendingAndCancelledOrders()
+            throws Exception {
+
+        clearOrders();
+
+        OffsetDateTime date =
+                OffsetDateTime.parse("2026-09-10T12:00:00+03:00");
+
+        createOrder("PAID", BigDecimal.valueOf(100), date);
+        createOrder("SHIPPED", BigDecimal.valueOf(200), date);
+        createOrder("DELIVERED", BigDecimal.valueOf(300), date);
+
+        createOrder("PENDING", BigDecimal.valueOf(1000), date);
+        createOrder("CANCELLED", BigDecimal.valueOf(2000), date);
+
+        mockMvc.perform(get("/reports/revenue")
+                        .cookie(adminCookie())
+                        .param("dateFrom", "2026-09-10")
+                        .param("dateTo", "2026-09-10")
+                        .param("groupBy", "DAY"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.length()").value(1))
+                .andExpect(jsonPath("$.data[0].revenue").value(600));
+    }
+
+    @Test
+    void getRevenueReport_respectsDateRange()
+            throws Exception {
+
+        clearOrders();
+
+        createOrder(
+                "PAID",
+                BigDecimal.valueOf(1000),
+                OffsetDateTime.parse("2026-09-09T12:00:00+03:00")
+        );
+        createOrder(
+                "PAID",
+                BigDecimal.valueOf(200),
+                OffsetDateTime.parse("2026-09-10T12:00:00+03:00")
+        );
+        createOrder(
+                "PAID",
+                BigDecimal.valueOf(300),
+                OffsetDateTime.parse("2026-09-11T12:00:00+03:00")
+        );
+        createOrder(
+                "PAID",
+                BigDecimal.valueOf(2000),
+                OffsetDateTime.parse("2026-09-12T12:00:00+03:00")
+        );
+
+        mockMvc.perform(get("/reports/revenue")
+                        .cookie(adminCookie())
+                        .param("dateFrom", "2026-09-10")
+                        .param("dateTo", "2026-09-11")
+                        .param("groupBy", "DAY"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.length()").value(2))
+                .andExpect(jsonPath("$.data[0].revenue").value(200))
+                .andExpect(jsonPath("$.data[1].revenue").value(300));
+    }
+
+    @Test
+    void getRevenueReport_noData_returnsEmptyList()
+            throws Exception {
+
+        clearOrders();
+
+        mockMvc.perform(get("/reports/revenue")
+                        .cookie(adminCookie())
+                        .param("dateFrom", "2026-09-01")
+                        .param("dateTo", "2026-09-30")
+                        .param("groupBy", "DAY"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data").isArray())
+                .andExpect(jsonPath("$.data").isEmpty());
+    }
+
+    @Test
+    void getRevenueReport_dateFromAfterDateTo_returns400()
+            throws Exception {
+
+        mockMvc.perform(get("/reports/revenue")
+                        .cookie(adminCookie())
+                        .param("dateFrom", "2026-09-30")
+                        .param("dateTo", "2026-09-01")
+                        .param("groupBy", "DAY"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void getRevenueReport_invalidGroupBy_returns400()
+            throws Exception {
+
+        mockMvc.perform(get("/reports/revenue")
+                        .cookie(adminCookie())
+                        .param("dateFrom", "2026-09-01")
+                        .param("dateTo", "2026-09-30")
+                        .param("groupBy", "YEAR"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void getRevenueReport_invalidDate_returns400()
+            throws Exception {
+
+        mockMvc.perform(get("/reports/revenue")
+                        .cookie(adminCookie())
+                        .param("dateFrom", "invalid")
+                        .param("dateTo", "2026-09-30")
+                        .param("groupBy", "DAY"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void getRevenueReport_missingParameters_returns400()
+            throws Exception {
+
+        mockMvc.perform(get("/reports/revenue")
+                        .cookie(adminCookie()))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void getRevenueReport_asUser_returns403()
+            throws Exception {
+
+        mockMvc.perform(get("/reports/revenue")
+                        .cookie(userCookie())
+                        .param("dateFrom", "2026-09-01")
+                        .param("dateTo", "2026-09-30")
+                        .param("groupBy", "DAY"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void getRevenueReport_withoutAuthentication_returns401()
+            throws Exception {
+
+        mockMvc.perform(get("/reports/revenue")
+                        .param("dateFrom", "2026-09-01")
+                        .param("dateTo", "2026-09-30")
+                        .param("groupBy", "DAY"))
+                .andExpect(status().isUnauthorized());
+    }
+
     // ── Helpers ────────────────────────────────────────────────────────────────
 
     private void clearOrders() {
@@ -331,14 +614,14 @@ class ReportControllerIntegrationTest extends BaseIntegrationTest {
         jdbcTemplate.update(connection -> {
             PreparedStatement statement = connection.prepareStatement(
                     """
-                    INSERT INTO products (
-                        name,
-                        price,
-                        category_id,
-                        image_url
-                    )
-                    VALUES (?, ?, ?, ?)
-                    """,
+                            INSERT INTO products (
+                                name,
+                                price,
+                                category_id,
+                                image_url
+                            )
+                            VALUES (?, ?, ?, ?)
+                            """,
                     new String[]{"product_id"}
             );
 
@@ -359,13 +642,13 @@ class ReportControllerIntegrationTest extends BaseIntegrationTest {
         jdbcTemplate.update(connection -> {
             PreparedStatement statement = connection.prepareStatement(
                     """
-                    INSERT INTO orders (
-                        user_id,
-                        total_price,
-                        status
-                    )
-                    VALUES (?, ?, ?)
-                    """,
+                            INSERT INTO orders (
+                                user_id,
+                                total_price,
+                                status
+                            )
+                            VALUES (?, ?, ?)
+                            """,
                     new String[]{"order_id"}
             );
 
@@ -402,18 +685,50 @@ class ReportControllerIntegrationTest extends BaseIntegrationTest {
     ) {
         jdbcTemplate.update(
                 """
-                INSERT INTO order_items (
-                    order_id,
-                    product_id,
-                    quantity,
-                    price_at_purchase
-                )
-                VALUES (?, ?, ?, ?)
-                """,
+                        INSERT INTO order_items (
+                            order_id,
+                            product_id,
+                            quantity,
+                            price_at_purchase
+                        )
+                        VALUES (?, ?, ?, ?)
+                        """,
                 orderId,
                 productId,
                 quantity,
                 BigDecimal.valueOf(100)
         );
+    }
+
+    private long createOrder(
+            String status,
+            BigDecimal totalPrice,
+            OffsetDateTime createdAt
+    ) {
+        KeyHolder keyHolder = new GeneratedKeyHolder();
+
+        jdbcTemplate.update(connection -> {
+            PreparedStatement statement = connection.prepareStatement(
+                    """
+                            INSERT INTO orders (
+                                user_id,
+                                total_price,
+                                status,
+                                created_at
+                            )
+                            VALUES (?, ?, ?, ?)
+                            """,
+                    new String[]{"order_id"}
+            );
+
+            statement.setLong(1, 2L);
+            statement.setBigDecimal(2, totalPrice);
+            statement.setString(3, status);
+            statement.setObject(4, createdAt);
+
+            return statement;
+        }, keyHolder);
+
+        return keyHolder.getKey().longValue();
     }
 }
