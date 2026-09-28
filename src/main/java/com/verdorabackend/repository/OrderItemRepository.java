@@ -1,5 +1,6 @@
 package com.verdorabackend.repository;
 
+import com.verdorabackend.dto.response.TopCancelledProductResponse;
 import com.verdorabackend.dto.response.TopPurchasedProductResponse;
 import com.verdorabackend.entity.OrderItem;
 import com.verdorabackend.entity.OrderStatus;
@@ -28,4 +29,21 @@ public interface OrderItemRepository extends JpaRepository<OrderItem, Long> {
             @Param("statuses") Collection<OrderStatus> statuses,
             Pageable pageable
     );
+
+    @Query("""
+            SELECT new com.verdorabackend.dto.response.TopCancelledProductResponse(
+                oi.product.id,
+                oi.product.name,
+                SUM(oi.quantity)
+            )
+            FROM OrderItem oi
+            WHERE oi.order.status = :status
+            GROUP BY oi.product.id, oi.product.name
+            ORDER BY SUM(oi.quantity) DESC, oi.product.id ASC
+            """)
+    List<TopCancelledProductResponse> findTopCancelledProducts(
+            @Param("status") OrderStatus status,
+            Pageable pageable
+    );
+
 }

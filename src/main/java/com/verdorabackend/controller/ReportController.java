@@ -2,6 +2,7 @@ package com.verdorabackend.controller;
 
 import com.verdorabackend.dto.response.BaseResponse;
 import com.verdorabackend.dto.response.BaseResponseFactory;
+import com.verdorabackend.dto.response.TopCancelledProductResponse;
 import com.verdorabackend.dto.response.TopPurchasedProductResponse;
 import com.verdorabackend.service.ReportService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -55,4 +56,32 @@ public class ReportController {
                 )
         );
     }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @SecurityRequirement(name = "Cookie-based Authentication")
+    @Operation(
+            summary = "Get top cancelled products",
+            description = "Returns up to 10 products with the highest total cancelled quantity"
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Report returned"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "403", description = "Forbidden")
+    })
+    @GetMapping("/top-cancelled")
+    public ResponseEntity<BaseResponse<List<TopCancelledProductResponse>>> getTopCancelledProducts() {
+        log.info("Admin request to get top cancelled products report");
+
+        List<TopCancelledProductResponse> response =
+                reportService.getTopCancelledProducts();
+
+        return ResponseEntity.ok(
+                BaseResponseFactory.success(
+                        HttpStatus.OK,
+                        "Top cancelled products fetched successfully",
+                        response
+                )
+        );
+    }
+
 }

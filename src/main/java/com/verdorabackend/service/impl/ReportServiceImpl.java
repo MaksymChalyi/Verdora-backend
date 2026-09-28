@@ -1,5 +1,6 @@
 package com.verdorabackend.service.impl;
 
+import com.verdorabackend.dto.response.TopCancelledProductResponse;
 import com.verdorabackend.dto.response.TopPurchasedProductResponse;
 import com.verdorabackend.entity.OrderStatus;
 import com.verdorabackend.repository.OrderItemRepository;
@@ -35,6 +36,17 @@ public class ReportServiceImpl implements ReportService {
 
         return orderItemRepository.findTopPurchasedProducts(
                 PURCHASED_STATUSES,
+                PageRequest.of(0, TOP_PRODUCTS_LIMIT)
+        );
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<TopCancelledProductResponse> getTopCancelledProducts() {
+        log.debug("Fetching top cancelled products");
+
+        return orderItemRepository.findTopCancelledProducts(
+                OrderStatus.CANCELLED,
                 PageRequest.of(0, TOP_PRODUCTS_LIMIT)
         );
     }
