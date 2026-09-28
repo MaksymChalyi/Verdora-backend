@@ -4,12 +4,14 @@ import com.verdorabackend.dto.request.CategoryRequest;
 import com.verdorabackend.dto.response.CategoryResponse;
 import com.verdorabackend.entity.Category;
 import com.verdorabackend.exception.CategoryAlreadyExistsException;
+import com.verdorabackend.exception.CategoryDeletionException;
 import com.verdorabackend.exception.CategoryNotFoundException;
 import com.verdorabackend.mapper.CategoryMapper;
 import com.verdorabackend.repository.CategoryRepository;
 import com.verdorabackend.service.CategoryService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -69,10 +71,17 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     @Transactional
-    public void deleteCategory(Long id) {
-        Category category = getByIdOrThrow(id);
-        categoryRepository.delete(category);
-        log.info("Category deleted, id={}", id);
+    public void deleteCategory(Long categoryId) {
+        log.debug("Deleting category with id: {}", categoryId);
+        Category category = getByIdOrThrow(categoryId);
+        try {
+            categoryRepository.delete(category);
+            categoryRepository.flush();
+        } catch (DataIntegrityViolationException exception) {
+            log.warn("Category deletion blocked, id={}", categoryId);
+            throw new CategoryDeletionException(categoryId);
+        }
+        log.info("Category deleted, id={}", categoryId);
     }
 
     private Category getByIdOrThrow(Long id) {
