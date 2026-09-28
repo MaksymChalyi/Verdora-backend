@@ -449,6 +449,80 @@ class ProductControllerIntegrationTest extends BaseIntegrationTest {
     }
 
     @Test
+    void updateProduct_priceBelowDiscount_returns400AndKeepsOldValues() throws Exception {
+        String createBody = """
+                {
+                  "name": "Discount Test Product",
+                  "description": "Test description",
+                  "price": 1000.00,
+                  "categoryId": 1,
+                  "imageUrl": "https://example.com/image.jpg",
+                  "discountPrice": 900.00
+                }
+                """;
+
+        String result = mockMvc.perform(post("/products")
+                        .cookie(adminCookie())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(createBody))
+                .andExpect(status().isCreated())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        long productId = objectMapper.readTree(result)
+                .path("data")
+                .path("productId")
+                .asLong();
+
+        String updateBody = """
+                {
+                  "name": "Discount Test Product",
+                  "description": "Test description",
+                  "price": 800.00,
+                  "categoryId": 1,
+                  "imageUrl": "https://example.com/image.jpg",
+                  "discountPrice": 900.00
+                }
+                """;
+
+        mockMvc.perform(put("/products/{id}", productId)
+                        .cookie(adminCookie())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(updateBody))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message")
+                        .value(org.hamcrest.Matchers.containsString(
+                                "Discount price must be lower than regular price"
+                        )));
+
+        mockMvc.perform(get("/products/{id}", productId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.price").value(1000.00))
+                .andExpect(jsonPath("$.data.discountPrice").value(900.00));
+    }
+
+    @Test
+    void updateProduct_negativeDiscountPrice_returns400() throws Exception {
+        String body = """
+                {
+                  "name": "Updated Product",
+                  "description": "Description",
+                  "price": 1000.00,
+                  "categoryId": 1,
+                  "imageUrl": "https://example.com/image.jpg",
+                  "discountPrice": -100.00
+                }
+                """;
+
+        mockMvc.perform(put("/products/1")
+                        .cookie(adminCookie())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void updateProduct_categoryNotFound_returns404() throws Exception {
         String body = """
             {
@@ -518,7 +592,6 @@ class ProductControllerIntegrationTest extends BaseIntegrationTest {
 
     @Test
     void deleteProduct_asAdmin_returns200() throws Exception {
-        // Спочатку створюємо продукт щоб видалити
         String createBody = """
                 {
                   "name": "To Delete",
