@@ -1,5 +1,6 @@
 package com.verdorabackend.service;
 
+import com.verdorabackend.dto.response.PendingPaymentOrderResponse;
 import com.verdorabackend.dto.response.TopCancelledProductResponse;
 import com.verdorabackend.dto.response.TopPurchasedProductResponse;
 
@@ -10,4 +11,6 @@ public interface ReportService {
     List<TopPurchasedProductResponse> getTopPurchasedProducts();
 
     List<TopCancelledProductResponse> getTopCancelledProducts();
+
+    List<PendingPaymentOrderResponse> getPendingPaymentOrders(int days);
 }

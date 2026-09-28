@@ -18,7 +18,11 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
+import com.verdorabackend.dto.response.PendingPaymentOrderResponse;
+import com.verdorabackend.exception.InvalidReportParameterException;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Schema;
+import org.springframework.web.bind.annotation.RequestParam;
 import java.util.List;
 
 @RestController
@@ -82,6 +86,61 @@ public class ReportController {
                         response
                 )
         );
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @SecurityRequirement(name = "Cookie-based Authentication")
+    @Operation(
+            summary = "Get pending payment orders",
+            description = "Returns orders that have remained in PENDING status longer than N days"
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Report returned"),
+            @ApiResponse(responseCode = "400", description = "Invalid n parameter"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "403", description = "Forbidden")
+    })
+    @GetMapping("/pending-payment")
+    public ResponseEntity<BaseResponse<List<PendingPaymentOrderResponse>>> getPendingPaymentOrders(
+            @Parameter(
+                    description = "Minimum number of days in pending payment status",
+                    example = "7",
+                    schema = @Schema(type = "integer", minimum = "1")
+            )
+            @RequestParam(required = false) String n) {
+
+        int days = parsePositiveDays(n);
+
+        log.info("Admin request to get orders pending payment longer than {} days", days);
+
+        List<PendingPaymentOrderResponse> response =
+                reportService.getPendingPaymentOrders(days);
+
+        return ResponseEntity.ok(
+                BaseResponseFactory.success(
+                        HttpStatus.OK,
+                        "Pending payment orders fetched successfully",
+                        response
+                )
+        );
+    }
+
+    private int parsePositiveDays(String n) {
+        if (n == null || n.isBlank()) {
+            throw new InvalidReportParameterException();
+        }
+
+        try {
+            int days = Integer.parseInt(n);
+
+            if (days < 1) {
+                throw new InvalidReportParameterException();
+            }
+
+            return days;
+        } catch (NumberFormatException exception) {
+            throw new InvalidReportParameterException();
+        }
     }
 
 }
