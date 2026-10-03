@@ -1,11 +1,11 @@
 package com.verdorabackend.security;
 
+import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import java.io.IOException;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -13,6 +13,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+
+import java.io.IOException;
 
 @Component
 @RequiredArgsConstructor
@@ -33,22 +35,27 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             filterChain.doFilter(request, response);
             return;
         }
+        try {
+            String email = jwtService.extractUsername(token);
 
-        String email = jwtService.extractUsername(token);
-        if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            UserDetails userDetails = userDetailsService.loadUserByUsername(email);
-            if (jwtService.isAccessTokenValid(token, userDetails)) {
-                UsernamePasswordAuthenticationToken authenticationToken =
-                        new UsernamePasswordAuthenticationToken(
-                                userDetails, null, userDetails.getAuthorities());
-                SecurityContextHolder.getContext().setAuthentication(authenticationToken);
+            if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                UserDetails userDetails = userDetailsService.loadUserByUsername(email);
+                if (jwtService.isAccessTokenValid(token, userDetails)) {
+                    UsernamePasswordAuthenticationToken authenticationToken =
+                            new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+                    SecurityContextHolder.getContext().setAuthentication(authenticationToken);
+                }
             }
+        } catch (JwtException | IllegalArgumentException exception) {
+            SecurityContextHolder.clearContext();
         }
         filterChain.doFilter(request, response);
     }
 
     private String extractTokenFromCookies(HttpServletRequest request) {
-        if (request.getCookies() == null) return null;
+        if (request.getCookies() == null) {
+            return null;
+        }
 
         for (Cookie cookie : request.getCookies()) {
             if ("accessToken".equals(cookie.getName())) {
