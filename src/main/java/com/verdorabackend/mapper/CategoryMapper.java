@@ -13,6 +13,5 @@ public interface CategoryMapper {
     Category toEntity(CategoryRequest request);
 
     @Mapping(source = "id", target = "categoryId")
-    @Mapping(source = "name", target = "name")
     CategoryResponse toResponse(Category category);
 }
