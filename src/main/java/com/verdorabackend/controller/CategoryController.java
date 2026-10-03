@@ -111,6 +111,13 @@ public class CategoryController {
     @PreAuthorize("hasRole('ADMIN')")
     @SecurityRequirement(name = "Cookie-based Authentication")
     @Operation(summary = "Delete category", description = "Deletes category by ID")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Category deleted successfully"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "403", description = "Forbidden"),
+            @ApiResponse(responseCode = "404", description = "Category not found"),
+            @ApiResponse(responseCode = "409", description = "Category is used by existing products")
+    })
     @DeleteMapping("/{id}")
     public ResponseEntity<BaseResponse<Void>> deleteCategory(@PathVariable Long id) {
         log.info("Request to delete category id={}", id);

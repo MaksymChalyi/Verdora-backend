@@ -7,6 +7,7 @@ import com.verdorabackend.repository.OrderRepository;
 import com.verdorabackend.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -27,6 +28,28 @@ class OrderControllerIntegrationTest extends BaseIntegrationTest {
 
     // ── POST /orders ──────────────────────────────────────────────────────────
 
+    @Test
+    void placeOrder_discountedProduct_usesDiscountPrice() throws Exception {
+        String body = """
+            {
+              "productId": 1,
+              "quantity": 2
+            }
+            """;
+
+        mockMvc.perform(post("/cart/items")
+                        .cookie(userCookie())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/orders")
+                        .cookie(userCookie()))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.totalPrice").value(1600.00))
+                .andExpect(jsonPath("$.data.items[0].priceAtPurchase").value(800.00))
+                .andExpect(jsonPath("$.data.items[0].subtotal").value(1600.00));
+    }
     @Test
     void placeOrder_emptyCart_returns400() throws Exception {
         mockMvc.perform(delete("/cart").cookie(userCookie()));

@@ -80,6 +80,25 @@ class CartControllerIntegrationTest extends BaseIntegrationTest {
                 .andExpect(status().isUnauthorized());
     }
 
+    @Test
+    void addItem_discountedProduct_usesDiscountPrice() throws Exception {
+        String body = """
+            {
+              "productId": 1,
+              "quantity": 2
+            }
+            """;
+
+        mockMvc.perform(post("/cart/items")
+                        .cookie(userCookie())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items[0].price").value(800.00))
+                .andExpect(jsonPath("$.data.items[0].subtotal").value(1600.00))
+                .andExpect(jsonPath("$.data.totalPrice").value(1600.00));
+    }
+
     // ── PUT /cart/items/{id} ──────────────────────────────────────────────────
     @Test
     void updateItem_notFound_returns404() throws Exception {

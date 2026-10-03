@@ -14,7 +14,7 @@ public interface CartMapper {
     @Mapping(source = "product.id", target = "productId")
     @Mapping(source = "product.name", target = "productName")
     @Mapping(source = "product.imageUrl", target = "imageUrl")
-    @Mapping(source = "product.price", target = "price")
+    @Mapping(source = "product.effectivePrice", target = "price")
     @Mapping(target = "subtotal", ignore = true)
     CartItemResponse toCartItemResponse(CartItem cartItem);
 

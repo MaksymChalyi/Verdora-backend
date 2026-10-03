@@ -29,7 +29,8 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class CartServiceImplTest {
@@ -99,8 +100,8 @@ class CartServiceImplTest {
         when(cartRepository.findByUser_Id(1L)).thenReturn(Optional.of(cart));
         when(productRepository.findById(1L)).thenReturn(Optional.of(product));
         when(cartItemRepository.findByCart_IdAndProduct_Id(1L, 1L)).thenReturn(Optional.empty());
-        when(cartItemRepository.save(any())).thenReturn(cartItem);
-        when(cartRepository.findByUser_Id(1L)).thenReturn(Optional.of(cart));
+        when(cartItemRepository.save(any(CartItem.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(cartMapper.toCartItemResponse(any(CartItem.class))).thenReturn(new CartItemResponse(1L, 1L, "Test Product", null, new BigDecimal("800.00"), 2L, null));
 
         cartService.addItem(1L, request);
 

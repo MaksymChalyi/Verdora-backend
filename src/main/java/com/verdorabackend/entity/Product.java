@@ -58,6 +58,13 @@ public class Product {
     @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt;
 
+    public BigDecimal getEffectivePrice() {
+        if (discountPrice != null && discountPrice.compareTo(price) < 0) {
+            return discountPrice;
+        }
+
+        return price;
+    }
 
     @PrePersist
     public void prePersist() {
