@@ -258,6 +258,93 @@ class OrderControllerIntegrationTest extends BaseIntegrationTest {
                 .andExpect(status().isNotFound());
     }
 
+    // ── GET /orders/{id}/status ──────────────────────────────────────────────────
+
+    @Test
+    void getOrderStatus_activeOrder_returns200AndFinalStatusFalse()
+            throws Exception {
+
+        Order order = createOrder(
+                OrderStatus.SHIPPED,
+                BigDecimal.valueOf(100)
+        );
+
+        mockMvc.perform(get("/orders/{orderId}/status", order.getId())
+                        .cookie(userCookie()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.orderId")
+                        .value(order.getId()))
+                .andExpect(jsonPath("$.data.status")
+                        .value("SHIPPED"))
+                .andExpect(jsonPath("$.data.finalStatus")
+                        .value(false));
+    }
+
+    @Test
+    void getOrderStatus_delivered_returnsFinalStatusTrue()
+            throws Exception {
+
+        Order order = createOrder(
+                OrderStatus.DELIVERED,
+                BigDecimal.valueOf(100)
+        );
+
+        mockMvc.perform(get("/orders/{orderId}/status", order.getId())
+                        .cookie(userCookie()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status")
+                        .value("DELIVERED"))
+                .andExpect(jsonPath("$.data.finalStatus")
+                        .value(true));
+    }
+
+    @Test
+    void getOrderStatus_cancelled_returnsFinalStatusTrue()
+            throws Exception {
+
+        Order order = createOrder(
+                OrderStatus.CANCELLED,
+                BigDecimal.valueOf(100)
+        );
+
+        mockMvc.perform(get("/orders/{orderId}/status", order.getId())
+                        .cookie(userCookie()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status")
+                        .value("CANCELLED"))
+                .andExpect(jsonPath("$.data.finalStatus")
+                        .value(true));
+    }
+
+    @Test
+    void getOrderStatus_notFound_returns404() throws Exception {
+        mockMvc.perform(get("/orders/99999/status")
+                        .cookie(userCookie()))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void getOrderStatus_anotherUsersOrder_returns404()
+            throws Exception {
+
+        Order order = createOrder(
+                OrderStatus.PAID,
+                BigDecimal.valueOf(100)
+        );
+
+        mockMvc.perform(get("/orders/{orderId}/status", order.getId())
+                        .cookie(adminCookie()))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void getOrderStatus_withoutAuthentication_returns401()
+            throws Exception {
+
+        mockMvc.perform(get("/orders/1/status"))
+                .andExpect(status().isUnauthorized());
+    }
+
     // ── GET /orders/{id}/details ──────────────────────────────────────────────
 
     @Test

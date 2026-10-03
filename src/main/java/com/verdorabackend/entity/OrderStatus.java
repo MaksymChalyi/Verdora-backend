@@ -5,5 +5,9 @@ public enum OrderStatus {
     PAID,
     SHIPPED,
     DELIVERED,
-    CANCELLED
+    CANCELLED;
+
+    public boolean isFinal() {
+        return this == DELIVERED || this == CANCELLED;
+    }
 }

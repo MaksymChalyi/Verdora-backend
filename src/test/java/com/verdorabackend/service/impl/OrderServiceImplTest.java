@@ -4,6 +4,7 @@ import com.verdorabackend.dto.request.UpdateOrderStatusRequest;
 import com.verdorabackend.dto.response.AdminOrderDetailsResponse;
 import com.verdorabackend.dto.response.AdminOrderResponse;
 import com.verdorabackend.dto.response.OrderResponse;
+import com.verdorabackend.dto.response.OrderStatusResponse;
 import com.verdorabackend.entity.*;
 import com.verdorabackend.exception.CartIsEmptyException;
 import com.verdorabackend.exception.OrderCannotBeCancelledException;
@@ -352,6 +353,61 @@ class OrderServiceImplTest {
 
         assertThatThrownBy(
                 () -> orderService.getOrderDetails(99L)
+        ).isInstanceOf(OrderNotFoundException.class);
+    }
+
+    // ── getOrderStatus ───────────────────────────────────────────────────────────
+
+    @Test
+    void getOrderStatus_activeOrder_returnsFinalStatusFalse() {
+        when(orderRepository.findStatusByIdAndUserId(1L, 1L))
+                .thenReturn(Optional.of(OrderStatus.SHIPPED));
+
+        OrderStatusResponse response =
+                orderService.getOrderStatus(1L, 1L);
+
+        assertThat(response.orderId()).isEqualTo(1L);
+        assertThat(response.status())
+                .isEqualTo(OrderStatus.SHIPPED);
+        assertThat(response.finalStatus()).isFalse();
+
+        verify(orderRepository)
+                .findStatusByIdAndUserId(1L, 1L);
+    }
+
+    @Test
+    void getOrderStatus_delivered_returnsFinalStatusTrue() {
+        when(orderRepository.findStatusByIdAndUserId(1L, 1L))
+                .thenReturn(Optional.of(OrderStatus.DELIVERED));
+
+        OrderStatusResponse response =
+                orderService.getOrderStatus(1L, 1L);
+
+        assertThat(response.status())
+                .isEqualTo(OrderStatus.DELIVERED);
+        assertThat(response.finalStatus()).isTrue();
+    }
+
+    @Test
+    void getOrderStatus_cancelled_returnsFinalStatusTrue() {
+        when(orderRepository.findStatusByIdAndUserId(1L, 1L))
+                .thenReturn(Optional.of(OrderStatus.CANCELLED));
+
+        OrderStatusResponse response =
+                orderService.getOrderStatus(1L, 1L);
+
+        assertThat(response.status())
+                .isEqualTo(OrderStatus.CANCELLED);
+        assertThat(response.finalStatus()).isTrue();
+    }
+
+    @Test
+    void getOrderStatus_notFound_throwsException() {
+        when(orderRepository.findStatusByIdAndUserId(99L, 1L))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(
+                () -> orderService.getOrderStatus(1L, 99L)
         ).isInstanceOf(OrderNotFoundException.class);
     }
 }
