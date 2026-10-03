@@ -9,13 +9,12 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDate;
-import java.util.List;
 
 public interface OrderService {
 
     OrderResponse placeOrder(Long userId);
 
-    List<OrderResponse> getOrders(Long userId);
+    Page<OrderResponse> getOrders(Long userId, Pageable pageable);
 
     Page<AdminOrderResponse> getAllOrders(
             OrderStatus status,

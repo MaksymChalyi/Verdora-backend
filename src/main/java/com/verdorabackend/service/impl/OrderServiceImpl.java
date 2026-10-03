@@ -81,12 +81,10 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<OrderResponse> getOrders(Long userId) {
-        log.debug("Fetching orders for userId={}", userId);
-        return orderRepository.findByUser_IdOrderByCreatedAtDesc(userId)
-                .stream()
-                .map(this::buildOrderResponse)
-                .toList();
+    public Page<OrderResponse> getOrders(Long userId, Pageable pageable) {
+        log.debug("Fetching orders for userId={}, pageable={}", userId, pageable);
+        return orderRepository.findByUser_Id(userId, pageable)
+                .map(this::buildOrderResponse);
     }
 
     @Override
