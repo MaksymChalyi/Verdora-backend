@@ -56,7 +56,7 @@ public class OrderServiceImpl implements OrderService {
             orderItem.setOrder(order);
             orderItem.setProduct(cartItem.getProduct());
             orderItem.setQuantity(Math.toIntExact(cartItem.getQuantity()));
-            orderItem.setPriceAtPurchase(cartItem.getProduct().getPrice());
+            orderItem.setPriceAtPurchase(cartItem.getProduct().getEffectivePrice());
             return orderItem;
         }).toList();
 

@@ -138,8 +138,7 @@ public class CartServiceImpl implements CartService {
         List<CartItemResponse> itemResponses = cart.getItems().stream()
                 .map(item -> {
                     CartItemResponse base = cartMapper.toCartItemResponse(item);
-                    BigDecimal subtotal = item.getProduct().getPrice()
-                            .multiply(BigDecimal.valueOf(item.getQuantity()));
+                    BigDecimal subtotal = base.price().multiply(BigDecimal.valueOf(item.getQuantity()));
                     return new CartItemResponse(
                             base.cartItemId(),
                             base.productId(),
@@ -156,7 +155,11 @@ public class CartServiceImpl implements CartService {
                 .map(CartItemResponse::subtotal)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        return new CartResponse(cart.getId(), itemResponses, totalPrice);
+        return new CartResponse(
+                cart.getId(),
+                itemResponses,
+                totalPrice
+        );
     }
 
     private void validateItemBelongsToCart(CartItem item, Cart cart) {
