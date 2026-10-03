@@ -91,12 +91,6 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<AdminOrderResponse> getAllOrders(Pageable pageable) {
-        return getAllOrders(null, null, null, pageable);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
     public Page<AdminOrderResponse> getAllOrders(
             OrderStatus status,
             LocalDate dateFrom,
