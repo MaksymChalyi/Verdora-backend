@@ -67,12 +67,11 @@ public class CartServiceImpl implements CartService {
             newItem.setCart(cart);
             newItem.setProduct(product);
             newItem.setQuantity(request.quantity());
-            cartItemRepository.save(newItem);
+            CartItem savedItem = cartItemRepository.save(newItem);
+            cart.getItems().add(savedItem);
             log.info("Added product={} to cart={}", product.getId(), cart.getId());
         }
-
-        Cart updatedCart = cartRepository.findByUser_Id(userId).orElseThrow();
-        return buildCartResponse(updatedCart);
+        return buildCartResponse(cart);
     }
 
     @Override
