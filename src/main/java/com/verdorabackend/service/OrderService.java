@@ -17,8 +17,6 @@ public interface OrderService {
 
     List<OrderResponse> getOrders(Long userId);
 
-    Page<AdminOrderResponse> getAllOrders(Pageable pageable);
-
     Page<AdminOrderResponse> getAllOrders(
             OrderStatus status,
             LocalDate dateFrom,
