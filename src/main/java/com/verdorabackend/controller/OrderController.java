@@ -128,11 +128,27 @@ public class OrderController {
         );
     }
 
-    @Operation(summary = "Cancel order", description = "Cancels an order. Only PENDING orders can be cancelled")
+    @Operation(
+            summary = "Cancel order",
+            description = "Cancels the current user's order if it is in PENDING or PAID status"
+    )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Order cancelled"),
-            @ApiResponse(responseCode = "404", description = "Order not found"),
-            @ApiResponse(responseCode = "409", description = "Order cannot be cancelled")
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Order cancelled successfully"
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "Unauthorized"
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Order not found"
+            ),
+            @ApiResponse(
+                    responseCode = "409",
+                    description = "Order cannot be cancelled in its current status"
+            )
     })
     @DeleteMapping("/{orderId}")
     public ResponseEntity<BaseResponse<OrderResponse>> cancelOrder(

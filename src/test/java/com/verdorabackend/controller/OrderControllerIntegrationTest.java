@@ -228,6 +228,84 @@ class OrderControllerIntegrationTest extends BaseIntegrationTest {
                 .andExpect(status().isNotFound());
     }
 
+    @Test
+    void cancelOrder_pending_returns200AndCancelledStatus() throws Exception {
+        Order order = createOrder(
+                OrderStatus.PENDING,
+                BigDecimal.valueOf(100)
+        );
+
+        mockMvc.perform(delete("/orders/{orderId}", order.getId())
+                        .cookie(userCookie()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message")
+                        .value("Order cancelled successfully"))
+                .andExpect(jsonPath("$.data.status")
+                        .value("CANCELLED"));
+    }
+
+    @Test
+    void cancelOrder_paid_returns200AndCancelledStatus() throws Exception {
+        Order order = createOrder(
+                OrderStatus.PAID,
+                BigDecimal.valueOf(100)
+        );
+
+        mockMvc.perform(delete("/orders/{orderId}", order.getId())
+                        .cookie(userCookie()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status")
+                        .value("CANCELLED"));
+    }
+
+    @Test
+    void cancelOrder_shipped_returns409() throws Exception {
+        Order order = createOrder(
+                OrderStatus.SHIPPED,
+                BigDecimal.valueOf(100)
+        );
+
+        mockMvc.perform(delete("/orders/{orderId}", order.getId())
+                        .cookie(userCookie()))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message")
+                        .value("Order cannot be cancelled when status is SHIPPED"));
+    }
+
+    @Test
+    void cancelOrder_delivered_returns409() throws Exception {
+        Order order = createOrder(
+                OrderStatus.DELIVERED,
+                BigDecimal.valueOf(100)
+        );
+
+        mockMvc.perform(delete("/orders/{orderId}", order.getId())
+                        .cookie(userCookie()))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message")
+                        .value("Order cannot be cancelled when status is DELIVERED"));
+    }
+
+    @Test
+    void cancelOrder_alreadyCancelled_returns409() throws Exception {
+        Order order = createOrder(
+                OrderStatus.CANCELLED,
+                BigDecimal.valueOf(100)
+        );
+
+        mockMvc.perform(delete("/orders/{orderId}", order.getId())
+                        .cookie(userCookie()))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message")
+                        .value("Order is already cancelled"));
+    }
+
+    @Test
+    void cancelOrder_unauthenticated_returns401() throws Exception {
+        mockMvc.perform(delete("/orders/1"))
+                .andExpect(status().isUnauthorized());
+    }
+
     private Order createOrder(OrderStatus status, BigDecimal totalPrice) {
         User user = userRepository.findById(2L).orElseThrow();
 
