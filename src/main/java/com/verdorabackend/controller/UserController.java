@@ -1,10 +1,12 @@
 package com.verdorabackend.controller;
 
+import com.verdorabackend.dto.request.DeleteAccountRequest;
 import com.verdorabackend.dto.request.UpdateUserRequest;
 import com.verdorabackend.dto.response.BaseResponse;
 import com.verdorabackend.dto.response.BaseResponseFactory;
 import com.verdorabackend.dto.response.ProfileResponse;
 import com.verdorabackend.dto.response.UserResponse;
+import com.verdorabackend.security.CookieService;
 import com.verdorabackend.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -14,6 +16,9 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,6 +28,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
@@ -35,6 +41,7 @@ import java.security.Principal;
 public class UserController {
 
     private final UserService userService;
+    private final CookieService cookieService;
 
     @SecurityRequirement(name = "Cookie-based Authentication")
     @Operation(
@@ -175,53 +182,75 @@ public class UserController {
 
     @SecurityRequirement(name = "Cookie-based Authentication")
     @Operation(
-            summary = "Delete user account",
-            description = "Deletes user account by ID"
+            summary = "Delete current user account",
+            description = "Deletes the currently authenticated user account after password confirmation"
     )
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "200",
-                    description = "User deleted successfully",
+                    description = "Account deleted successfully",
                     content = @Content(
                             mediaType = "application/json",
                             schema = @Schema(implementation = BaseResponse.class),
                             examples = @ExampleObject(value = """
                                     {
-                                      "timestamp": "2026-05-09T13:55:49.772Z",
+                                      "timestamp": "2026-10-03T13:55:49.772Z",
                                       "status": 200,
-                                      "message": "User deleted successfully",
+                                      "message": "Account deleted successfully",
                                       "data": null
                                     }
                                     """)
                     )
             ),
             @ApiResponse(
-                    responseCode = "404",
-                    description = "User not found",
+                    responseCode = "400",
+                    description = "Password is missing or invalid request",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = BaseResponse.class)
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "Unauthorized or invalid password",
                     content = @Content(
                             mediaType = "application/json",
                             schema = @Schema(implementation = BaseResponse.class),
                             examples = @ExampleObject(value = """
                                     {
-                                      "timestamp": "2026-05-09T13:55:49.773Z",
-                                      "status": 404,
-                                      "message": "User not found",
+                                      "timestamp": "2026-10-03T13:55:49.773Z",
+                                      "status": 401,
+                                      "message": "Invalid password",
                                       "data": null
                                     }
                                     """)
                     )
             )
     })
-    @DeleteMapping("/{userId}")
-    public ResponseEntity<BaseResponse<Void>> deleteUser(@PathVariable Long userId) {
-        log.info("Request to delete user: userId={}", userId);
+    @DeleteMapping("/current-user")
+    public ResponseEntity<BaseResponse<Void>> deleteCurrentUser(
+            @Valid @RequestBody DeleteAccountRequest request,
+            Principal principal, HttpServletRequest httpServletRequest,
+            HttpServletResponse httpServletResponse) {
 
-        userService.deleteUser(userId);
+        log.info("Request to delete current user account");
+        userService.deleteCurrentUser(
+                principal.getName(),
+                request.password()
+        );
+
+        cookieService.clearAuthCookies(httpServletResponse);
+
+        HttpSession session = httpServletRequest.getSession(false);
+        if (session != null) {
+            session.invalidate();
+        }
+        SecurityContextHolder.clearContext();
 
         return ResponseEntity.ok(
                 BaseResponseFactory.success(
                         HttpStatus.OK,
-                        "User deleted successfully",
+                        "Account deleted successfully",
                         null
                 )
         );

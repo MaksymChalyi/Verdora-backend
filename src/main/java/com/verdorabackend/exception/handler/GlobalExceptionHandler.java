@@ -64,7 +64,7 @@ public class GlobalExceptionHandler {
                 .status(HttpStatus.UNAUTHORIZED)
                 .body(BaseResponseFactory.error(
                         HttpStatus.UNAUTHORIZED,
-                        "Invalid email or password"
+                        exception.getMessage()
                 ));
     }
 
