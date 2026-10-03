@@ -129,17 +129,17 @@ public class OrderController {
         );
     }
 
-    @Operation(summary = "Get order by ID", description = "Returns a specific order of the current user")
+    @Operation(summary = "Get order details", description = "Returns full details of a specific order belonging to the currently authenticated user")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Order returned"),
+            @ApiResponse(responseCode = "200", description = "Order details returned successfully"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "Order not found")
     })
     @GetMapping("/{orderId}")
-    public ResponseEntity<BaseResponse<OrderResponse>> getOrder(
-            @AuthenticationPrincipal UserPrincipal principal,
-            @PathVariable Long orderId) {
-        log.info("Request to get orderId={} for userId={}", orderId, principal.getUser().getId());
-        OrderResponse response = orderService.getOrder(principal.getUser().getId(), orderId);
+    public ResponseEntity<BaseResponse<OrderResponse>> getOrder(@AuthenticationPrincipal UserPrincipal principal, @PathVariable Long orderId) {
+        Long userId = principal.getUser().getId();
+        log.info("Request to get orderId={} for userId={}", orderId, userId);
+        OrderResponse response = orderService.getOrder(userId, orderId);
         return ResponseEntity.ok(
                 BaseResponseFactory.success(HttpStatus.OK, "Order fetched successfully", response)
         );

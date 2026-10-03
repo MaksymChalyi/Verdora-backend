@@ -199,6 +199,8 @@ public class OrderServiceImpl implements OrderService {
                             base.orderItemId(),
                             base.productId(),
                             base.productName(),
+                            base.imageUrl(),
+                            base.categoryName(),
                             base.quantity(),
                             base.priceAtPurchase(),
                             subtotal
