@@ -38,3 +38,8 @@ app:
     secret: dGVzdC1zZWNyZXQta2V5LWZvci10ZXN0aW5nLXB1cnBvc2Vz
     access-expiration-ms: 900000
     refresh-expiration-ms: 604800000
+
+cloudinary:
+  cloud-name: test-cloud
+  api-key: test-key
+  api-secret: test-secret
