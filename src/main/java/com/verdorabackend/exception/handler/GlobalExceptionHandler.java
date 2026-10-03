@@ -14,10 +14,36 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
 
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<BaseResponse<Void>> handleMaxUploadSize(
+            MaxUploadSizeExceededException exception) {
+
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(BaseResponseFactory.error(
+                        HttpStatus.BAD_REQUEST,
+                        "Image size must not exceed 5 MB"
+                ));
+    }
+
+    @ExceptionHandler(MissingServletRequestPartException.class)
+    public ResponseEntity<BaseResponse<Void>> handleMissingRequestPart(
+            MissingServletRequestPartException exception) {
+
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(BaseResponseFactory.error(
+                        HttpStatus.BAD_REQUEST,
+                        "Image file is required"
+                ));
+    }
 
     @ExceptionHandler(BaseException.class)
     public ResponseEntity<BaseResponse<Void>> handleApiException(BaseException exception) {
