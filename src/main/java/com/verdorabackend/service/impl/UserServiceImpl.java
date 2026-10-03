@@ -23,13 +23,17 @@ public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
-    @Transactional
     @Override
-    public UserResponse updateUser(Long userId, UpdateUserRequest request) {
-        User user = userRepository.findById(userId).orElseThrow(UserNotFoundException::new);
+    @Transactional
+    public UserResponse updateCurrentUser(
+            String email,
+            UpdateUserRequest request
+    ) {
+        User user = userRepository.findUserByEmail(email)
+                .orElseThrow(UserNotFoundException::new);
         user.setName(request.name());
         user.setPhoneNumber(request.phone());
-        log.info("User updated: userId={}", userId);
+        log.info("User profile updated: userId={}", user.getId());
         return new UserResponse(
                 user.getId(),
                 user.getName(),

@@ -1,6 +1,8 @@
 package com.verdorabackend.service.impl;
 
 import com.verdorabackend.dto.request.UpdateOrderStatusRequest;
+import com.verdorabackend.dto.response.AdminOrderDetailsResponse;
+import com.verdorabackend.dto.response.AdminOrderResponse;
 import com.verdorabackend.dto.response.OrderResponse;
 import com.verdorabackend.entity.*;
 import com.verdorabackend.exception.CartIsEmptyException;
@@ -15,8 +17,14 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -25,6 +33,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -53,6 +62,9 @@ class OrderServiceImplTest {
     void setUp() {
         user = new User();
         user.setId(1L);
+        user.setName("Test User");
+        user.setEmail("user@verdora.com");
+        user.setPhoneNumber("+380501234567");
 
         product = new Product();
         product.setId(1L);
@@ -148,6 +160,45 @@ class OrderServiceImplTest {
         assertThat(result).isEmpty();
     }
 
+    // ── getAllOrders ─────────────────────────────────────────────────────────
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void getAllOrders_returnsOrdersPage() {
+        Pageable pageable = PageRequest.of(0, 12);
+
+        Page<Order> orders = new PageImpl<>(
+                List.of(order),
+                pageable,
+                1
+        );
+
+        when(orderRepository.findAll(any(Specification.class),
+                eq(pageable))).thenReturn(orders);
+
+        Page<AdminOrderResponse> result = orderService.getAllOrders(
+                OrderStatus.PENDING,
+                LocalDate.now().minusDays(7),
+                LocalDate.now(),
+                pageable
+        );
+
+        assertThat(result).hasSize(1);
+        assertThat(result.getContent().get(0).orderId())
+                .isEqualTo(1L);
+        assertThat(result.getContent().get(0).status())
+                .isEqualTo(OrderStatus.PENDING);
+        assertThat(result.getContent().get(0).customer().id())
+                .isEqualTo(1L);
+        assertThat(result.getContent().get(0).customer().email())
+                .isEqualTo("user@verdora.com");
+
+        verify(orderRepository).findAll(
+                any(Specification.class),
+                eq(pageable)
+        );
+    }
+
     // ── getOrder ─────────────────────────────────────────────────────────────
 
     @Test
@@ -183,12 +234,14 @@ class OrderServiceImplTest {
     @Test
     void cancelOrder_paidOrder_cancels() {
         order.setStatus(OrderStatus.PAID);
+
         when(orderRepository.findByIdAndUser_Id(1L, 1L)).thenReturn(Optional.of(order));
 
         OrderResponse response = orderService.cancelOrder(1L, 1L);
 
         assertThat(order.getStatus()).isEqualTo(OrderStatus.CANCELLED);
         assertThat(response.status()).isEqualTo(OrderStatus.CANCELLED);
+
         verify(orderRepository).findByIdAndUser_Id(1L, 1L);
     }
 
@@ -197,6 +250,7 @@ class OrderServiceImplTest {
         order.setStatus(OrderStatus.SHIPPED);
 
         when(orderRepository.findByIdAndUser_Id(1L, 1L)).thenReturn(Optional.of(order));
+
         assertThatThrownBy(() -> orderService.cancelOrder(1L, 1L)).isInstanceOf(OrderCannotBeCancelledException.class);
     }
 
@@ -237,9 +291,10 @@ class OrderServiceImplTest {
         when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
         when(orderRepository.save(any())).thenReturn(order);
 
-        orderService.updateOrderStatus(1L, request);
+        OrderResponse response = orderService.updateOrderStatus(1L, request);
 
         assertThat(order.getStatus()).isEqualTo(OrderStatus.SHIPPED);
+        assertThat(response.status()).isEqualTo(OrderStatus.SHIPPED);
         verify(orderRepository).save(order);
     }
 
@@ -248,7 +303,53 @@ class OrderServiceImplTest {
         UpdateOrderStatusRequest request = new UpdateOrderStatusRequest(OrderStatus.PAID);
         when(orderRepository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> orderService.updateOrderStatus(99L, request))
-                .isInstanceOf(OrderNotFoundException.class);
+        assertThatThrownBy(() -> orderService.updateOrderStatus(99L, request)).isInstanceOf(OrderNotFoundException.class);
+    }
+
+    // ── getOrderDetails ──────────────────────────────────────────────────────
+
+    @Test
+    void getOrderDetails_existingOrder_returnsDetails() {
+        order.setStatus(OrderStatus.PAID);
+
+        when(orderRepository.findById(1L))
+                .thenReturn(Optional.of(order));
+
+        AdminOrderDetailsResponse result =
+                orderService.getOrderDetails(1L);
+
+        assertThat(result.orderId())
+                .isEqualTo(1L);
+
+        assertThat(result.status())
+                .isEqualTo(OrderStatus.PAID);
+
+        assertThat(result.totalPrice())
+                .isEqualByComparingTo(BigDecimal.valueOf(2000));
+
+        assertThat(result.customer().id())
+                .isEqualTo(1L);
+
+        assertThat(result.customer().name())
+                .isEqualTo("Test User");
+
+        assertThat(result.customer().email())
+                .isEqualTo("user@verdora.com");
+
+        assertThat(result.customer().phone())
+                .isEqualTo("+380501234567");
+
+        assertThat(result.items())
+                .isEmpty();
+    }
+
+    @Test
+    void getOrderDetails_notFound_throwsException() {
+        when(orderRepository.findById(99L))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(
+                () -> orderService.getOrderDetails(99L)
+        ).isInstanceOf(OrderNotFoundException.class);
     }
 }
