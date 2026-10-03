@@ -7,7 +7,7 @@ import org.springframework.data.domain.Pageable;
 
 public interface UserService {
 
-    UserResponse updateUser(Long userId, UpdateUserRequest request);
+    UserResponse updateCurrentUser(String email, UpdateUserRequest request);
 
     UserResponse getUserByEmail(String email);
 

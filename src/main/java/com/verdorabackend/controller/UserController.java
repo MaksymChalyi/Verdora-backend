@@ -107,74 +107,45 @@ public class UserController {
 
     @SecurityRequirement(name = "Cookie-based Authentication")
     @Operation(
-            summary = "Update user profile",
-            description = "Updates name and phone number of the user by ID"
+            summary = "Update current user profile",
+            description = "Updates name and phone number of the currently authenticated user"
     )
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "200",
-                    description = "User updated successfully",
-                    content = @Content(
-                            mediaType = "application/json",
-                            schema = @Schema(implementation = BaseResponse.class),
-                            examples = @ExampleObject(value = """
-                                    {
-                                      "timestamp": "2026-05-09T13:55:49.772Z",
-                                      "status": 200,
-                                      "message": "User updated successfully",
-                                      "data": {
-                                        "id": 1,
-                                        "name": "Stepan",
-                                        "email": "stepan@gmail.com",
-                                        "phone": "+380989703417"
-                                      }
-                                    }
-                                    """)
-                    )
+                    description = "Profile updated successfully"
             ),
             @ApiResponse(
                     responseCode = "400",
-                    description = "Bad Request",
-                    content = @Content(
-                            mediaType = "application/json",
-                            schema = @Schema(implementation = BaseResponse.class),
-                            examples = @ExampleObject(value = """
-                                    {
-                                      "timestamp": "2026-05-09T13:55:49.773Z",
-                                      "status": 400,
-                                      "message": "Validation failed",
-                                      "data": null
-                                    }
-                                    """)
-                    )
+                    description = "Invalid profile data"
             ),
             @ApiResponse(
-                    responseCode = "404",
-                    description = "User not found",
-                    content = @Content(
-                            mediaType = "application/json",
-                            schema = @Schema(implementation = BaseResponse.class),
-                            examples = @ExampleObject(value = """
-                                    {
-                                      "timestamp": "2026-05-09T13:55:49.773Z",
-                                      "status": 404,
-                                      "message": "User not found",
-                                      "data": null
-                                    }
-                                    """)
-                    )
+                    responseCode = "401",
+                    description = "Unauthorized"
             )
     })
-    @PutMapping("/{id}")
-    public ResponseEntity<BaseResponse<UserResponse>> updateUser(
-            @PathVariable Long id,
-            @Valid @RequestBody UpdateUserRequest request) {
-        log.info("Request to update user: userId={}", id);
-        UserResponse response = userService.updateUser(id, request);
+    @PutMapping("/current-user")
+    public ResponseEntity<BaseResponse<ProfileResponse>> updateCurrentUser(
+            Principal principal,
+            @Valid @RequestBody UpdateUserRequest request
+    ) {
+        log.info("Request to update current user profile");
+
+        UserResponse user = userService.updateCurrentUser(
+                principal.getName(),
+                request
+        );
+
+        ProfileResponse response = new ProfileResponse(
+                user.name(),
+                user.email(),
+                user.phone()
+        );
+
         return ResponseEntity.ok(
                 BaseResponseFactory.success(
                         HttpStatus.OK,
-                        "User updated successfully",
+                        "Profile updated successfully",
                         response
                 )
         );

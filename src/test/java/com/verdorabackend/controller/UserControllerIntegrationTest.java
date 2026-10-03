@@ -37,6 +37,121 @@ class UserControllerIntegrationTest extends BaseIntegrationTest {
                 .andExpect(status().isUnauthorized());
     }
 
+    // ── PUT /users/current-user ───────────────────────────────────────────────
+
+    @Test
+    void updateCurrentUser_validData_returns200() throws Exception {
+        String body = """
+                {
+                  "name": "Updated User",
+                  "phone": "+380501234567"
+                }
+                """;
+
+        mockMvc.perform(put("/users/current-user")
+                        .cookie(userCookie())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message")
+                        .value("Profile updated successfully"))
+                .andExpect(jsonPath("$.data.name")
+                        .value("Updated User"))
+                .andExpect(jsonPath("$.data.phone")
+                        .value("+380501234567"))
+                .andExpect(jsonPath("$.data.email").exists())
+                .andExpect(jsonPath("$.data.id").doesNotExist());
+    }
+
+    @Test
+    void updateCurrentUser_withoutEmail_returns200() throws Exception {
+        String body = """
+                {
+                  "name": "Updated User",
+                  "phone": "+380501234567"
+                }
+                """;
+
+        mockMvc.perform(put("/users/current-user")
+                        .cookie(userCookie())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.email").exists());
+    }
+
+    @Test
+    void updateCurrentUser_invalidPhone_returns400() throws Exception {
+        String body = """
+                {
+                  "name": "Updated User",
+                  "phone": "12345"
+                }
+                """;
+
+        mockMvc.perform(put("/users/current-user")
+                        .cookie(userCookie())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void updateCurrentUser_blankName_returns400() throws Exception {
+        String body = """
+                {
+                  "name": "   ",
+                  "phone": "+380501234567"
+                }
+                """;
+
+        mockMvc.perform(put("/users/current-user")
+                        .cookie(userCookie())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void updateCurrentUser_unauthenticated_returns401() throws Exception {
+        String body = """
+                {
+                  "name": "Updated User",
+                  "phone": "+380501234567"
+                }
+                """;
+
+        mockMvc.perform(put("/users/current-user")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void updateCurrentUser_afterUpdate_getProfileReturnsUpdatedData() throws Exception {
+        String body = """
+                {
+                  "name": "Updated User",
+                  "phone": "+380501234567"
+                }
+                """;
+
+        mockMvc.perform(put("/users/current-user")
+                        .cookie(userCookie())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/users/current-user")
+                        .cookie(userCookie()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.name")
+                        .value("Updated User"))
+                .andExpect(jsonPath("$.data.phone")
+                        .value("+380501234567"))
+                .andExpect(jsonPath("$.data.email").exists());
+    }
+
     // ── GET /users (ADMIN) ────────────────────────────────────────────────────
 
     @Test
@@ -50,23 +165,6 @@ class UserControllerIntegrationTest extends BaseIntegrationTest {
     @Test
     void getAllUsers_unauthenticated_returns401() throws Exception {
         mockMvc.perform(get("/users"))
-                .andExpect(status().isUnauthorized());
-    }
-
-    // ── PUT /users/{id} ───────────────────────────────────────────────────────
-
-    @Test
-    void updateUser_unauthenticated_returns401() throws Exception {
-        String body = """
-                {
-                  "name": "Test",
-                  "phoneNumber": "+380501234567"
-                }
-                """;
-
-        mockMvc.perform(put("/users/2")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(body))
                 .andExpect(status().isUnauthorized());
     }
 
