@@ -87,7 +87,7 @@ class OrderControllerIntegrationTest extends BaseIntegrationTest {
     @Test
     void getOrders_pageSizeIsLimitedTo12() throws Exception {
         for (int i = 0; i < 13; i++) {
-            createOrder(                    OrderStatus.PENDING,                    BigDecimal.valueOf(100 + i)            );
+            createOrder(OrderStatus.PENDING, BigDecimal.valueOf(100 + i));
         }
 
         mockMvc.perform(get("/orders")
@@ -184,6 +184,77 @@ class OrderControllerIntegrationTest extends BaseIntegrationTest {
     void getOrder_notFound_returns404() throws Exception {
         mockMvc.perform(get("/orders/99999")
                         .cookie(userCookie()))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void getOrder_existingOrder_returnsFullDetails() throws Exception {
+        String body = """
+                {
+                  "productId": 1,
+                  "quantity": 2
+                }
+                """;
+
+        mockMvc.perform(post("/cart/items")
+                        .cookie(userCookie())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isOk());
+
+        String result = mockMvc.perform(post("/orders")
+                        .cookie(userCookie()))
+                .andExpect(status().isCreated())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        long orderId = objectMapper.readTree(result)
+                .path("data")
+                .path("orderId")
+                .asLong();
+
+        mockMvc.perform(get("/orders/{orderId}", orderId)
+                        .cookie(userCookie()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.orderId")
+                        .value(orderId))
+                .andExpect(jsonPath("$.data.createdAt")
+                        .exists())
+                .andExpect(jsonPath("$.data.totalPrice")
+                        .exists())
+                .andExpect(jsonPath("$.data.status")
+                        .exists())
+                .andExpect(jsonPath("$.data.items")
+                        .isArray())
+                .andExpect(jsonPath("$.data.items[0].productId")
+                        .value(1))
+                .andExpect(jsonPath("$.data.items[0].productName")
+                        .exists())
+                .andExpect(jsonPath("$.data.items[0].imageUrl")
+                        .exists())
+                .andExpect(jsonPath("$.data.items[0].categoryName")
+                        .exists())
+                .andExpect(jsonPath("$.data.items[0].quantity")
+                        .value(2))
+                .andExpect(jsonPath("$.data.items[0].priceAtPurchase")
+                        .exists())
+                .andExpect(jsonPath("$.data.items[0].subtotal")
+                        .exists());
+    }
+
+    @Test
+    void getOrder_withoutAuthentication_returns401() throws Exception {
+        mockMvc.perform(get("/orders/1"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void getOrder_anotherUsersOrder_returns404() throws Exception {
+        Order order = createOrder(OrderStatus.PAID, BigDecimal.valueOf(200));
+
+        mockMvc.perform(get("/orders/{orderId}", order.getId())
+                        .cookie(adminCookie()))
                 .andExpect(status().isNotFound());
     }
 

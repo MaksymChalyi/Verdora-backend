@@ -13,6 +13,8 @@ public interface OrderMapper {
     @Mapping(source = "id", target = "orderItemId")
     @Mapping(source = "product.id", target = "productId")
     @Mapping(source = "product.name", target = "productName")
+    @Mapping(source = "product.imageUrl", target = "imageUrl")
+    @Mapping(source = "product.category.name", target = "categoryName")
     @Mapping(target = "subtotal", ignore = true)
     OrderItemResponse toOrderItemResponse(OrderItem orderItem);
 
