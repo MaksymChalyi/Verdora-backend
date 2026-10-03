@@ -11,7 +11,7 @@ public interface UserService {
 
     UserResponse getUserByEmail(String email);
 
-    void deleteUser(Long userId);
+    void deleteCurrentUser(String email, String password);
 
     Page<UserResponse> getAllUsers(Pageable pageable);
 }
