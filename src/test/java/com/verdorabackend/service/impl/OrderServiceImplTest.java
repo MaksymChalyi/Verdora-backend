@@ -25,14 +25,20 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class OrderServiceImplTest {
 
-    @Mock private OrderRepository orderRepository;
-    @Mock private CartRepository cartRepository;
-    @Mock private OrderMapper orderMapper;
+    @Mock
+    private OrderRepository orderRepository;
+
+    @Mock
+    private CartRepository cartRepository;
+
+    @Mock
+    private OrderMapper orderMapper;
 
     @InjectMocks
     private OrderServiceImpl orderService;
@@ -109,9 +115,9 @@ class OrderServiceImplTest {
     void placeOrder_fixesPriceAtPurchase() {
         product.setPrice(BigDecimal.valueOf(999));
         when(cartRepository.findByUser_Id(1L)).thenReturn(Optional.of(cart));
-        when(orderRepository.save(any())).thenAnswer(inv -> {
-            Order saved = inv.getArgument(0);
-            saved.getItems().forEach(item ->
+        when(orderRepository.save(any())).thenAnswer(invocation -> {
+            Order savedOrder = invocation.getArgument(0);
+            savedOrder.getItems().forEach(item ->
                     assertThat(item.getPriceAtPurchase()).isEqualByComparingTo(BigDecimal.valueOf(999))
             );
             return order;
@@ -167,17 +173,37 @@ class OrderServiceImplTest {
     void cancelOrder_pendingOrder_cancels() {
         order.setStatus(OrderStatus.PENDING);
         when(orderRepository.findByIdAndUser_Id(1L, 1L)).thenReturn(Optional.of(order));
-        when(orderRepository.save(any())).thenReturn(order);
-
-        orderService.cancelOrder(1L, 1L);
+        OrderResponse response = orderService.cancelOrder(1L, 1L);
 
         assertThat(order.getStatus()).isEqualTo(OrderStatus.CANCELLED);
-        verify(orderRepository).save(order);
+        assertThat(response.status()).isEqualTo(OrderStatus.CANCELLED);
+        verify(orderRepository).findByIdAndUser_Id(1L, 1L);
     }
 
     @Test
-    void cancelOrder_paidOrder_throwsException() {
+    void cancelOrder_paidOrder_cancels() {
         order.setStatus(OrderStatus.PAID);
+        when(orderRepository.findByIdAndUser_Id(1L, 1L)).thenReturn(Optional.of(order));
+
+        OrderResponse response = orderService.cancelOrder(1L, 1L);
+
+        assertThat(order.getStatus()).isEqualTo(OrderStatus.CANCELLED);
+        assertThat(response.status()).isEqualTo(OrderStatus.CANCELLED);
+        verify(orderRepository).findByIdAndUser_Id(1L, 1L);
+    }
+
+    @Test
+    void cancelOrder_shippedOrder_throwsException() {
+        order.setStatus(OrderStatus.SHIPPED);
+
+        when(orderRepository.findByIdAndUser_Id(1L, 1L)).thenReturn(Optional.of(order));
+        assertThatThrownBy(() -> orderService.cancelOrder(1L, 1L)).isInstanceOf(OrderCannotBeCancelledException.class);
+    }
+
+    @Test
+    void cancelOrder_deliveredOrder_throwsException() {
+        order.setStatus(OrderStatus.DELIVERED);
+
         when(orderRepository.findByIdAndUser_Id(1L, 1L)).thenReturn(Optional.of(order));
 
         assertThatThrownBy(() -> orderService.cancelOrder(1L, 1L))
@@ -185,9 +211,11 @@ class OrderServiceImplTest {
     }
 
     @Test
-    void cancelOrder_shippedOrder_throwsException() {
-        order.setStatus(OrderStatus.SHIPPED);
-        when(orderRepository.findByIdAndUser_Id(1L, 1L)).thenReturn(Optional.of(order));
+    void cancelOrder_alreadyCancelled_throwsException() {
+        order.setStatus(OrderStatus.CANCELLED);
+
+        when(orderRepository.findByIdAndUser_Id(1L, 1L))
+                .thenReturn(Optional.of(order));
 
         assertThatThrownBy(() -> orderService.cancelOrder(1L, 1L))
                 .isInstanceOf(OrderCannotBeCancelledException.class);
