@@ -3,6 +3,7 @@ package com.verdorabackend.controller;
 import com.verdorabackend.dto.request.UpdateUserRequest;
 import com.verdorabackend.dto.response.BaseResponse;
 import com.verdorabackend.dto.response.BaseResponseFactory;
+import com.verdorabackend.dto.response.ProfileResponse;
 import com.verdorabackend.dto.response.UserResponse;
 import com.verdorabackend.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -37,23 +38,22 @@ public class UserController {
 
     @SecurityRequirement(name = "Cookie-based Authentication")
     @Operation(
-            summary = "Get current user",
-            description = "Returns current authenticated user based on accessToken cookie"
+            summary = "Get current user profile",
+            description = "Returns profile data of the currently authenticated user"
     )
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "200",
-                    description = "User returned",
+                    description = "Profile returned successfully",
                     content = @Content(
                             mediaType = "application/json",
                             schema = @Schema(implementation = BaseResponse.class),
                             examples = @ExampleObject(value = """
                                     {
-                                      "timestamp": "2026-05-09T13:55:49.772Z",
+                                      "timestamp": "2026-10-03T13:55:49.772Z",
                                       "status": 200,
-                                      "message": "User fetched successfully",
+                                      "message": "Profile fetched successfully",
                                       "data": {
-                                        "id": 1,
                                         "name": "Stepan",
                                         "email": "stepan@gmail.com",
                                         "phone": "+380989703417"
@@ -70,7 +70,7 @@ public class UserController {
                             schema = @Schema(implementation = BaseResponse.class),
                             examples = @ExampleObject(value = """
                                     {
-                                      "timestamp": "2026-05-09T13:55:49.773Z",
+                                      "timestamp": "2026-10-03T13:55:49.773Z",
                                       "status": 401,
                                       "message": "Unauthorized",
                                       "data": null
@@ -80,13 +80,19 @@ public class UserController {
             )
     })
     @GetMapping("/current-user")
-    public ResponseEntity<BaseResponse<UserResponse>> getCurrentUser(Principal principal) {
-        log.info("Request for current user details");
-        UserResponse response = userService.getUserByEmail(principal.getName());
+    public ResponseEntity<BaseResponse<ProfileResponse>> getCurrentUser(Principal principal) {
+        log.info("Request for current user profile");
+        UserResponse user = userService.getUserByEmail(principal.getName());
+        ProfileResponse response = new ProfileResponse(
+                user.name(),
+                user.email(),
+                user.phone()
+        );
+
         return ResponseEntity.ok(
                 BaseResponseFactory.success(
                         HttpStatus.OK,
-                        "User fetched successfully",
+                        "Profile fetched successfully",
                         response
                 )
         );
