@@ -121,18 +121,21 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public OrderResponse cancelOrder(Long userId, Long orderId) {
-        log.debug("Cancelling orderId={} for userId={}", orderId, userId);
         Order order = orderRepository.findByIdAndUser_Id(orderId, userId)
                 .orElseThrow(() -> new OrderNotFoundException(orderId));
 
-        if (order.getStatus() != OrderStatus.PENDING) {
+        if (order.getStatus() == OrderStatus.CANCELLED) {
             throw new OrderCannotBeCancelledException(orderId);
         }
 
+        if (order.getStatus() != OrderStatus.PENDING
+                && order.getStatus() != OrderStatus.PAID) {
+            throw new OrderCannotBeCancelledException(orderId, order.getStatus());
+        }
         order.setStatus(OrderStatus.CANCELLED);
-        Order saved = orderRepository.save(order);
-        log.info("Order cancelled, id={}", orderId);
-        return buildOrderResponse(saved);
+        log.info("Order cancelled: orderId={}, userId={}", orderId, userId);
+
+        return buildOrderResponse(order);
     }
 
     @Override
