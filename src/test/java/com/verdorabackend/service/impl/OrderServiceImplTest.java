@@ -17,10 +17,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.*;
 import org.springframework.data.jpa.domain.Specification;
 
 import java.math.BigDecimal;
@@ -143,21 +140,26 @@ class OrderServiceImplTest {
 
     @Test
     void getOrders_returnsUserOrders() {
-        when(orderRepository.findByUser_IdOrderByCreatedAtDesc(1L)).thenReturn(List.of(order));
+        Pageable pageable = PageRequest.of(0, 12, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Page<Order> orders = new PageImpl<>(List.of(order), pageable, 1);
+        when(orderRepository.findByUser_Id(1L, pageable)).thenReturn(orders);
 
-        List<OrderResponse> result = orderService.getOrders(1L);
+        Page<OrderResponse> result = orderService.getOrders(1L, pageable);
 
-        assertThat(result).hasSize(1);
-        verify(orderRepository).findByUser_IdOrderByCreatedAtDesc(1L);
+        assertThat(result.getContent()).hasSize(1);
+        assertThat(result.getTotalElements()).isEqualTo(1);
+        verify(orderRepository).findByUser_Id(1L, pageable);
     }
 
     @Test
-    void getOrders_noOrders_returnsEmptyList() {
-        when(orderRepository.findByUser_IdOrderByCreatedAtDesc(1L)).thenReturn(List.of());
+    void getOrders_noOrders_returnsEmptyPage() {
+        Pageable pageable = PageRequest.of(0, 12, Sort.by(Sort.Direction.DESC, "createdAt"));
+        when(orderRepository.findByUser_Id(1L, pageable)).thenReturn(Page.empty(pageable));
 
-        List<OrderResponse> result = orderService.getOrders(1L);
+        Page<OrderResponse> result = orderService.getOrders(1L, pageable);
 
-        assertThat(result).isEmpty();
+        assertThat(result.getContent()).isEmpty();
+        assertThat(result.getTotalElements()).isZero();
     }
 
     // ── getAllOrders ─────────────────────────────────────────────────────────

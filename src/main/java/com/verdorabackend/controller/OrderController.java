@@ -14,6 +14,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
@@ -24,7 +25,6 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
-import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
@@ -51,13 +51,30 @@ public class OrderController {
         );
     }
 
-    @Operation(summary = "Get all orders", description = "Returns all orders of the current user, newest first")
-    @ApiResponse(responseCode = "200", description = "Orders returned")
+    @Operation(
+            summary = "Get current user's order history",
+            description = "Returns paginated order history of the currently authenticated user"
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Orders returned successfully"
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "Unauthorized"
+            )
+    })
     @GetMapping
-    public ResponseEntity<BaseResponse<List<OrderResponse>>> getOrders(
-            @AuthenticationPrincipal UserPrincipal principal) {
-        log.info("Request to get orders for userId={}", principal.getUser().getId());
-        List<OrderResponse> response = orderService.getOrders(principal.getUser().getId());
+    public ResponseEntity<BaseResponse<Page<OrderResponse>>> getOrders(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PageableDefault(size = 12, sort = "createdAt", direction = Sort.Direction.DESC)
+            Pageable pageable
+    ) {
+        Long userId = principal.getUser().getId();
+        log.info("Request to get orders for userId={}, page={}, size={}", userId, pageable.getPageNumber(), pageable.getPageSize());
+        Pageable limitedPageable = PageRequest.of(pageable.getPageNumber(), Math.min(pageable.getPageSize(), 12), pageable.getSort());
+        Page<OrderResponse> response = orderService.getOrders(userId, limitedPageable);
         return ResponseEntity.ok(
                 BaseResponseFactory.success(HttpStatus.OK, "Orders fetched successfully", response)
         );

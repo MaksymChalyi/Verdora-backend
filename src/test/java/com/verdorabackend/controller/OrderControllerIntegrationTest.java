@@ -73,13 +73,47 @@ class OrderControllerIntegrationTest extends BaseIntegrationTest {
         mockMvc.perform(get("/orders")
                         .cookie(userCookie()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data").isArray());
+                .andExpect(jsonPath("$.data.content").isArray())
+                .andExpect(jsonPath("$.data.size").value(12))
+                .andExpect(jsonPath("$.data.number").value(0));
     }
 
     @Test
     void getOrders_unauthenticated_returns401() throws Exception {
         mockMvc.perform(get("/orders"))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void getOrders_pageSizeIsLimitedTo12() throws Exception {
+        for (int i = 0; i < 13; i++) {
+            createOrder(                    OrderStatus.PENDING,                    BigDecimal.valueOf(100 + i)            );
+        }
+
+        mockMvc.perform(get("/orders")
+                        .cookie(userCookie())
+                        .param("size", "100"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.size").value(12))
+                .andExpect(jsonPath("$.data.content.length()").value(12));
+    }
+
+    @Test
+    void getOrders_secondPage_returns200() throws Exception {
+        for (int i = 0; i < 13; i++) {
+            createOrder(
+                    OrderStatus.PENDING,
+                    BigDecimal.valueOf(100 + i)
+            );
+        }
+
+        mockMvc.perform(get("/orders")
+                        .cookie(userCookie())
+                        .param("page", "1")
+                        .param("size", "12"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.number").value(1))
+                .andExpect(jsonPath("$.data.content").isArray());
     }
 
     // ── GET /orders/all ───────────────────────────────────────────────────────
