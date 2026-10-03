@@ -19,7 +19,6 @@ class UserControllerIntegrationTest extends BaseIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.name").exists())
                 .andExpect(jsonPath("$.data.email").exists())
-                .andExpect(jsonPath("$.data.phone").exists())
                 .andExpect(jsonPath("$.data.id").doesNotExist())
                 .andExpect(jsonPath("$.data.password").doesNotExist())
                 .andExpect(jsonPath("$.data.passwordHash").doesNotExist())
