@@ -4,8 +4,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.transaction.annotation.Transactional;
 
+import static org.hamcrest.Matchers.hasItem;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @Transactional
 class CategoryControllerIntegrationTest extends BaseIntegrationTest {
@@ -23,13 +25,71 @@ class CategoryControllerIntegrationTest extends BaseIntegrationTest {
                 .andExpect(jsonPath("$.data.size").value(12));
     }
 
+    @Test
+    void getAllCategories_returnsImageUrl() throws Exception {
+        String body = """
+                {
+                  "name": "Home Page Category",
+                  "imageUrl": "https://example.com/categories/home-page.jpg"
+                }
+                """;
+
+        String result = mockMvc.perform(post("/categories")
+                        .cookie(adminCookie())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isCreated())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        long categoryId = objectMapper.readTree(result)
+                .path("data")
+                .path("categoryId")
+                .asLong();
+
+        mockMvc.perform(get("/categories")
+                        .param("size", "100"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath(
+                        "$.data.content[?(@.categoryId == "
+                                + categoryId
+                                + ")].imageUrl"
+                ).value(hasItem(
+                        "https://example.com/categories/home-page.jpg"
+                )));
+    }
+
     // ── POST /categories ──────────────────────────────────────────────────────
+
+    @Test
+    void createCategory_asAdmin_returns201WithImageUrl() throws Exception {
+        String body = """
+                {
+                  "name": "New Category",
+                  "imageUrl": "https://example.com/categories/new-category.jpg"
+                }
+                """;
+
+        mockMvc.perform(post("/categories")
+                        .cookie(adminCookie())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.name")
+                        .value("New Category"))
+                .andExpect(jsonPath("$.data.imageUrl")
+                        .value(
+                                "https://example.com/categories/new-category.jpg"
+                        ));
+    }
 
     @Test
     void createCategory_duplicateNameIgnoreCase_returns409() throws Exception {
         String body = """
                 {
-                  "name": "ЕлектронІКА"
+                  "name": "ЕлектронІКА",
+                  "imageUrl": "https://example.com/categories/electronics.jpg"
                 }
                 """;
 
@@ -39,14 +99,33 @@ class CategoryControllerIntegrationTest extends BaseIntegrationTest {
                         .content(body))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.message")
-                        .value("Category already exists, name=ЕлектронІКА"));
+                        .value(
+                                "Category already exists, name=ЕлектронІКА"
+                        ));
+    }
+
+    @Test
+    void createCategory_missingImage_returns400() throws Exception {
+        String body = """
+                {
+                  "name": "New Category",
+                  "imageUrl": ""
+                }
+                """;
+
+        mockMvc.perform(post("/categories")
+                        .cookie(adminCookie())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isBadRequest());
     }
 
     @Test
     void createCategory_asUser_returns403() throws Exception {
         String body = """
                 {
-                  "name": "New Category"
+                  "name": "New Category",
+                  "imageUrl": "https://example.com/categories/new-category.jpg"
                 }
                 """;
 
@@ -61,7 +140,8 @@ class CategoryControllerIntegrationTest extends BaseIntegrationTest {
     void createCategory_withoutAuthentication_returns401() throws Exception {
         String body = """
                 {
-                  "name": "New Category"
+                  "name": "New Category",
+                  "imageUrl": "https://example.com/categories/new-category.jpg"
                 }
                 """;
 
@@ -81,6 +161,41 @@ class CategoryControllerIntegrationTest extends BaseIntegrationTest {
     }
 
     @Test
+    void getCategory_returnsImageUrl() throws Exception {
+        String body = """
+                {
+                  "name": "Category With Image",
+                  "imageUrl": "https://example.com/categories/category.jpg"
+                }
+                """;
+
+        String result = mockMvc.perform(post("/categories")
+                        .cookie(adminCookie())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isCreated())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        long categoryId = objectMapper.readTree(result)
+                .path("data")
+                .path("categoryId")
+                .asLong();
+
+        mockMvc.perform(get("/categories/{id}", categoryId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.categoryId")
+                        .value(categoryId))
+                .andExpect(jsonPath("$.data.name")
+                        .value("Category With Image"))
+                .andExpect(jsonPath("$.data.imageUrl")
+                        .value(
+                                "https://example.com/categories/category.jpg"
+                        ));
+    }
+
+    @Test
     void getCategory_notFound_returns404() throws Exception {
         mockMvc.perform(get("/categories/99999"))
                 .andExpect(status().isNotFound());
@@ -92,7 +207,8 @@ class CategoryControllerIntegrationTest extends BaseIntegrationTest {
     void updateCategory_notFound_returns404() throws Exception {
         String body = """
                 {
-                  "name": "Updated"
+                  "name": "Updated",
+                  "imageUrl": "https://example.com/categories/updated.jpg"
                 }
                 """;
 
@@ -107,7 +223,8 @@ class CategoryControllerIntegrationTest extends BaseIntegrationTest {
     void updateCategory_asAdmin_returns200() throws Exception {
         String body = """
                 {
-                  "name": "Нова категорія"
+                  "name": "Нова категорія",
+                  "imageUrl": "https://example.com/categories/updated.jpg"
                 }
                 """;
 
@@ -116,15 +233,22 @@ class CategoryControllerIntegrationTest extends BaseIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.categoryId").value(1))
-                .andExpect(jsonPath("$.data.name").value("Нова категорія"));
+                .andExpect(jsonPath("$.data.categoryId")
+                        .value(1))
+                .andExpect(jsonPath("$.data.name")
+                        .value("Нова категорія"))
+                .andExpect(jsonPath("$.data.imageUrl")
+                        .value(
+                                "https://example.com/categories/updated.jpg"
+                        ));
     }
 
     @Test
     void updateCategory_asUser_returns403() throws Exception {
         String body = """
                 {
-                  "name": "Нова категорія"
+                  "name": "Нова категорія",
+                  "imageUrl": "https://example.com/categories/updated.jpg"
                 }
                 """;
 
@@ -139,9 +263,11 @@ class CategoryControllerIntegrationTest extends BaseIntegrationTest {
     void updateCategory_withoutAuthentication_returns401() throws Exception {
         String body = """
                 {
-                  "name": "Нова категорія"
+                  "name": "Нова категорія",
+                  "imageUrl": "https://example.com/categories/updated.jpg"
                 }
                 """;
+
         mockMvc.perform(put("/categories/1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
@@ -152,7 +278,8 @@ class CategoryControllerIntegrationTest extends BaseIntegrationTest {
     void updateCategory_duplicateNameIgnoreCase_returns409() throws Exception {
         String body = """
                 {
-                  "name": "одяг"
+                  "name": "одяг",
+                  "imageUrl": "https://example.com/categories/clothes.jpg"
                 }
                 """;
 
@@ -167,7 +294,8 @@ class CategoryControllerIntegrationTest extends BaseIntegrationTest {
     void updateCategory_sameName_returns200() throws Exception {
         String body = """
                 {
-                  "name": "Електроніка"
+                  "name": "Електроніка",
+                  "imageUrl": "https://example.com/categories/electronics.jpg"
                 }
                 """;
 
@@ -176,14 +304,20 @@ class CategoryControllerIntegrationTest extends BaseIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.name").value("Електроніка"));
+                .andExpect(jsonPath("$.data.name")
+                        .value("Електроніка"))
+                .andExpect(jsonPath("$.data.imageUrl")
+                        .value(
+                                "https://example.com/categories/electronics.jpg"
+                        ));
     }
 
     @Test
     void updateCategory_blankName_returns400() throws Exception {
         String body = """
                 {
-                  "name": "   "
+                  "name": "   ",
+                  "imageUrl": "https://example.com/categories/category.jpg"
                 }
                 """;
 
@@ -198,9 +332,26 @@ class CategoryControllerIntegrationTest extends BaseIntegrationTest {
     void updateCategory_nameTooLong_returns400() throws Exception {
         String body = """
                 {
-                  "name": "%s"
+                  "name": "%s",
+                  "imageUrl": "https://example.com/categories/category.jpg"
                 }
                 """.formatted("a".repeat(257));
+
+        mockMvc.perform(put("/categories/1")
+                        .cookie(adminCookie())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void updateCategory_missingImage_returns400() throws Exception {
+        String body = """
+                {
+                  "name": "Updated Category",
+                  "imageUrl": ""
+                }
+                """;
 
         mockMvc.perform(put("/categories/1")
                         .cookie(adminCookie())
@@ -213,19 +364,28 @@ class CategoryControllerIntegrationTest extends BaseIntegrationTest {
 
     @Test
     void deleteCategory_asAdmin_returns200() throws Exception {
-        // Створюємо нову категорію без продуктів щоб безпечно видалити
         String createBody = """
-                { "name": "To Delete" }
+                {
+                  "name": "To Delete",
+                  "imageUrl": "https://example.com/categories/to-delete.jpg"
+                }
                 """;
+
         String result = mockMvc.perform(post("/categories")
                         .cookie(adminCookie())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(createBody))
-                .andReturn().getResponse().getContentAsString();
+                .andExpect(status().isCreated())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
 
-        Long categoryId = objectMapper.readTree(result).path("data").path("categoryId").asLong();
+        Long categoryId = objectMapper.readTree(result)
+                .path("data")
+                .path("categoryId")
+                .asLong();
 
-        mockMvc.perform(delete("/categories/" + categoryId)
+        mockMvc.perform(delete("/categories/{id}", categoryId)
                         .cookie(adminCookie()))
                 .andExpect(status().isOk());
     }

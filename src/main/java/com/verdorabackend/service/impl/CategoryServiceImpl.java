@@ -65,6 +65,7 @@ public class CategoryServiceImpl implements CategoryService {
         }
 
         category.setName(request.name());
+        category.setImageUrl(request.imageUrl());
         log.info("Category updated, id={}", id);
         return categoryMapper.toResponse(category);
     }

@@ -8,10 +8,13 @@ import jakarta.validation.constraints.Size;
 public record CategoryRequest(
 
         @Schema(description = "Category name", example = "Electronics")
-        @NotBlank
-        @Size(max = 256)
-        String name
+        @NotBlank(message = "Category name is required")
+        @Size(max = 256, message = "Category name must not exceed 256 characters")
+        String name,
 
+        @Schema(description = "Category image URL", example = "https://example.com/categories/electronics.jpg")
+        @NotBlank(message = "Image is required")
+        @Size(max = 2048, message = "Image URL must not exceed 2048 characters")
+        String imageUrl
 ) {
-
 }
