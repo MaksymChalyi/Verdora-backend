@@ -4,6 +4,7 @@ import com.verdorabackend.dto.request.UpdateOrderStatusRequest;
 import com.verdorabackend.dto.response.AdminOrderDetailsResponse;
 import com.verdorabackend.dto.response.AdminOrderResponse;
 import com.verdorabackend.dto.response.OrderResponse;
+import com.verdorabackend.dto.response.OrderStatusResponse;
 import com.verdorabackend.entity.OrderStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -30,4 +31,6 @@ public interface OrderService {
     OrderResponse updateOrderStatus(Long orderId, UpdateOrderStatusRequest request);
 
     AdminOrderDetailsResponse getOrderDetails(Long orderId);
+
+    OrderStatusResponse getOrderStatus(Long userId, Long orderId);
 }

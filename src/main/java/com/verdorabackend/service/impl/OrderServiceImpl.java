@@ -158,6 +158,17 @@ public class OrderServiceImpl implements OrderService {
         return buildAdminOrderDetailsResponse(order);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public OrderStatusResponse getOrderStatus(Long userId, Long orderId) {
+        log.debug("Fetching status for orderId={}, userId={}", orderId, userId);
+        OrderStatus status = orderRepository
+                .findStatusByIdAndUserId(orderId, userId)
+                .orElseThrow(() -> new OrderNotFoundException(orderId));
+
+        return new OrderStatusResponse(orderId, status, status.isFinal());
+    }
+
     private AdminOrderDetailsResponse buildAdminOrderDetailsResponse(Order order) {
         OrderResponse orderResponse = buildOrderResponse(order);
         AdminOrderResponse adminOrderResponse = buildAdminOrderResponse(order);

@@ -129,6 +129,36 @@ public class OrderController {
         );
     }
 
+    @Operation(summary = "Get order status", description = "Returns the current status of the authenticated user's order. The endpoint is intended for lightweight polling.")
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Order status returned successfully"
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "Unauthorized"
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Order not found"
+            )
+    })
+    @GetMapping("/{orderId}/status")
+    public ResponseEntity<BaseResponse<OrderStatusResponse>> getOrderStatus(@AuthenticationPrincipal UserPrincipal principal, @PathVariable Long orderId) {
+        Long userId = principal.getUser().getId();
+        log.debug("Request to get status for orderId={}, userId={}", orderId, userId);
+        OrderStatusResponse response = orderService.getOrderStatus(userId, orderId);
+
+        return ResponseEntity.ok(
+                BaseResponseFactory.success(
+                        HttpStatus.OK,
+                        "Order status fetched successfully",
+                        response
+                )
+        );
+    }
+
     @Operation(summary = "Get order details", description = "Returns full details of a specific order belonging to the currently authenticated user")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Order details returned successfully"),
