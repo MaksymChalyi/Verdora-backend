@@ -31,11 +31,11 @@ class OrderControllerIntegrationTest extends BaseIntegrationTest {
     @Test
     void placeOrder_discountedProduct_usesDiscountPrice() throws Exception {
         String body = """
-            {
-              "productId": 1,
-              "quantity": 2
-            }
-            """;
+                {
+                  "productId": 1,
+                  "quantity": 2
+                }
+                """;
 
         mockMvc.perform(post("/cart/items")
                         .cookie(userCookie())
@@ -50,6 +50,7 @@ class OrderControllerIntegrationTest extends BaseIntegrationTest {
                 .andExpect(jsonPath("$.data.items[0].priceAtPurchase").value(800.00))
                 .andExpect(jsonPath("$.data.items[0].subtotal").value(1600.00));
     }
+
     @Test
     void placeOrder_emptyCart_returns400() throws Exception {
         mockMvc.perform(delete("/cart").cookie(userCookie()));
@@ -152,7 +153,7 @@ class OrderControllerIntegrationTest extends BaseIntegrationTest {
                 .andExpect(status().isNotFound());
     }
 
-    // ── GET /orders/{id}/details ────────────────────────────────────────────────
+    // ── GET /orders/{id}/details ──────────────────────────────────────────────
 
     @Test
     void getOrderDetails_asAdmin_returns200() throws Exception {
@@ -202,8 +203,12 @@ class OrderControllerIntegrationTest extends BaseIntegrationTest {
 
         mockMvc.perform(patch("/orders/{orderId}/status", order.getId())
                         .cookie(adminCookie())
-                        .contentType("application/json")
-                        .content("{\"status\":\"DELIVERED\"}"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "status": "DELIVERED"
+                                }
+                                """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value("DELIVERED"));
     }
@@ -214,8 +219,12 @@ class OrderControllerIntegrationTest extends BaseIntegrationTest {
 
         mockMvc.perform(patch("/orders/{orderId}/status", order.getId())
                         .cookie(userCookie())
-                        .contentType("application/json")
-                        .content("{\"status\":\"DELIVERED\"}"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "status": "DELIVERED"
+                                }
+                                """))
                 .andExpect(status().isForbidden());
     }
 
@@ -254,6 +263,8 @@ class OrderControllerIntegrationTest extends BaseIntegrationTest {
         mockMvc.perform(delete("/orders/{orderId}", order.getId())
                         .cookie(userCookie()))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message")
+                        .value("Order cancelled successfully"))
                 .andExpect(jsonPath("$.data.status")
                         .value("CANCELLED"));
     }
@@ -269,7 +280,12 @@ class OrderControllerIntegrationTest extends BaseIntegrationTest {
                         .cookie(userCookie()))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.message")
-                        .value("Order cannot be cancelled when status is SHIPPED"));
+                        .value(
+                                "Order cannot be cancelled, id="
+                                        + order.getId()
+                                        + ". Current status: SHIPPED"
+                                        + ". Only PENDING and PAID orders can be cancelled"
+                        ));
     }
 
     @Test
@@ -283,7 +299,12 @@ class OrderControllerIntegrationTest extends BaseIntegrationTest {
                         .cookie(userCookie()))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.message")
-                        .value("Order cannot be cancelled when status is DELIVERED"));
+                        .value(
+                                "Order cannot be cancelled, id="
+                                        + order.getId()
+                                        + ". Current status: DELIVERED"
+                                        + ". Only PENDING and PAID orders can be cancelled"
+                        ));
     }
 
     @Test
@@ -297,7 +318,10 @@ class OrderControllerIntegrationTest extends BaseIntegrationTest {
                         .cookie(userCookie()))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.message")
-                        .value("Order is already cancelled"));
+                        .value(
+                                "Order is already cancelled, id="
+                                        + order.getId()
+                        ));
     }
 
     @Test

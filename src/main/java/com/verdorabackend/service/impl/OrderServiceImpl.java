@@ -121,8 +121,7 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public OrderResponse cancelOrder(Long userId, Long orderId) {
-        Order order = orderRepository.findById(orderId)
-                .filter(existingOrder -> existingOrder.getUser().getId().equals(userId))
+        Order order = orderRepository.findByIdAndUser_Id(orderId, userId)
                 .orElseThrow(() -> new OrderNotFoundException(orderId));
 
         if (order.getStatus() == OrderStatus.CANCELLED) {
