@@ -3,7 +3,9 @@ package com.verdorabackend.controller;
 import com.verdorabackend.dto.request.ProductRequest;
 import com.verdorabackend.dto.response.BaseResponse;
 import com.verdorabackend.dto.response.BaseResponseFactory;
+import com.verdorabackend.dto.response.ImageUploadResponse;
 import com.verdorabackend.dto.response.ProductResponse;
+import com.verdorabackend.service.ImageStorageService;
 import com.verdorabackend.service.ProductService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -21,9 +23,11 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 
@@ -35,6 +39,7 @@ import java.math.BigDecimal;
 public class ProductController {
 
     private final ProductService productService;
+    private final ImageStorageService imageStorageService;
 
     @Operation(
             summary = "Get products",
@@ -179,6 +184,34 @@ public class ProductController {
                         HttpStatus.OK,
                         "Product of the day fetched successfully",
                         response
+                )
+        );
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @SecurityRequirement(name = "Cookie-based Authentication")
+    @Operation(summary = "Upload product image", description = "Uploads a product image and returns its URL")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Image uploaded successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid image"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "403", description = "Forbidden"),
+            @ApiResponse(responseCode = "500", description = "Image upload failed")
+    })
+    @PostMapping(
+            value = "/upload-image",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
+    public ResponseEntity<BaseResponse<ImageUploadResponse>> uploadImage(
+            @RequestPart("file") MultipartFile file) {
+
+        log.info("Request to upload product image: name={}, size={}", file.getOriginalFilename(), file.getSize());
+        String imageUrl = imageStorageService.uploadProductImage(file);
+        return ResponseEntity.ok(
+                BaseResponseFactory.success(
+                        HttpStatus.OK,
+                        "Image uploaded successfully",
+                        new ImageUploadResponse(imageUrl)
                 )
         );
     }

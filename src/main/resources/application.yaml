@@ -14,6 +14,11 @@ spring:
   application:
     name: verdora-backend
 
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 6MB
+
   datasource:
     driver-class-name: ${DB_DRIVER}
     url: ${DB_URL}
@@ -44,3 +49,8 @@ app:
     secret: ${JWT_SECRET:3qzqVSvMGFVncul6arlN0Na0F/YcSbmJyvICg43Q2cQ=}
     access-expiration-ms: 900000 # 15 min
     refresh-expiration-ms: 604800000 # 7 days
+
+cloudinary:
+  cloud-name: ${CLOUDINARY_CLOUD_NAME}
+  api-key: ${CLOUDINARY_API_KEY}
+  api-secret: ${CLOUDINARY_API_SECRET}
