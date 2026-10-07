@@ -18,34 +18,45 @@
 
 ## GET /favorites
 
-Повертає всі товари у вибраному поточного користувача.
+Повертає **сторінку** обраних товарів лише поточного користувача. Потребує `accessToken` cookie.
+
+**Параметри:** `page` — номер сторінки з 0 (default `0`); `size` — кількість товарів (default `12`, максимум `12`, більші значення обмежуються до `12`). `page < 0` або `size < 1` → `400 Bad Request`.
+
+Порядок: `addedAt` (у БД `created_at`) **DESC**, потім `productId` **ASC**. За незмінних даних результат стабільний; додавання/видалення записів між запитами може зсунути offset-pagination.
 
 **Response 200:**
+
 ```json
 {
-  "timestamp": "2026-05-23T12:00:00Z",
   "status": 200,
   "message": "Favorites fetched successfully",
-  "data": [
-    {
-      "productId": 1,
-      "productName": "Ноутбук ASUS VivoBook 15",
-      "imageUrl": "https://picsum.photos/seed/p1/400/300",
-      "price": 32999.99,
-      "discountPrice": 27999.99,
-      "addedAt": "2026-05-20T10:00:00Z"
-    },
-    {
-      "productId": 3,
-      "productName": "Смартфон Samsung Galaxy A55",
-      "imageUrl": "https://picsum.photos/seed/p3/400/300",
-      "price": 18999.00,
-      "discountPrice": 18999.00,
-      "addedAt": "2026-05-21T14:30:00Z"
-    }
-  ]
+  "data": {
+    "content": [
+      {
+        "productId": 1,
+        "productName": "Ноутбук ASUS VivoBook 15",
+        "imageUrl": "https://example.com/laptop.jpg",
+        "price": 32999.99,
+        "discountPrice": 27999.99,
+        "addedAt": "2026-05-20T10:00:00Z"
+      }
+    ],
+    "page": 0,
+    "size": 12,
+    "totalElements": 1,
+    "totalPages": 1,
+    "hasNext": false
+  }
 }
 ```
+
+Якщо favorites немає: `200 OK`, `data.content: []`, `totalElements: 0`, `totalPages: 0`, `hasNext: false`.
+
+На FE, коли `hasNext` true, для наступної сторінки запитують `page + 1` із тим самим `size`.
+
+**Важливо:** `price` — звичайна ціна, `discountPrice` — акційна (nullable). Для показу фактичної вартості береться `discountPrice` лише якщо вона менша за `price`. Це має збігатися з FE-контрактом і мапінгом `FavoriteMapper`.
+
+**Response 401** — потрібна автентифікація.
 
 ---
 
@@ -118,8 +129,8 @@
 | `productId` | Long | ID товару |
 | `productName` | String | Назва товару |
 | `imageUrl` | String | URL зображення |
-| `price` | BigDecimal | Поточна ціна |
-| `discountPrice` | BigDecimal | Ціна зі знижкою |
+| `price` | BigDecimal | Звичайна ціна (до знижки) |
+| `discountPrice` | BigDecimal, nullable | Акційна ціна, якщо вона є |
 | `addedAt` | OffsetDateTime | Дата додавання в обране |
 
 ---

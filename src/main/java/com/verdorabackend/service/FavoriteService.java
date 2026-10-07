@@ -2,12 +2,12 @@ package com.verdorabackend.service;
 
 import com.verdorabackend.dto.response.FavoriteResponse;
 import com.verdorabackend.dto.response.FavoriteStateResponse;
-
-import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 public interface FavoriteService {
 
-    List<FavoriteResponse> getFavorites(Long userId);
+    Page<FavoriteResponse> getFavorites(Long userId, Pageable pageable);
 
     boolean isFavorite(Long userId, Long productId);
 

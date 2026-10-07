@@ -19,6 +19,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
@@ -76,22 +80,27 @@ class FavoriteServiceImplTest {
     @Test
     void getFavorites_returnsList() {
         FavoriteResponse response = mockFavoriteResponse();
-        when(favoriteRepository.findByUser_Id(1L)).thenReturn(List.of(favorite));
+        Pageable pageable = PageRequest.of(0, 12);
+        when(favoriteRepository.findByUser_Id(1L, pageable))
+                .thenReturn(new PageImpl<>(List.of(favorite), pageable, 1));
         when(favoriteMapper.toResponse(favorite)).thenReturn(response);
 
-        List<FavoriteResponse> result = favoriteService.getFavorites(1L);
+        Page<FavoriteResponse> result = favoriteService.getFavorites(1L, pageable);
 
-        assertThat(result).hasSize(1);
-        verify(favoriteRepository).findByUser_Id(1L);
+        assertThat(result.getContent()).containsExactly(response);
+        assertThat(result.getTotalElements()).isEqualTo(1);
+        verify(favoriteRepository).findByUser_Id(1L, pageable);
     }
 
     @Test
     void getFavorites_empty_returnsEmptyList() {
-        when(favoriteRepository.findByUser_Id(1L)).thenReturn(List.of());
+        Pageable pageable = PageRequest.of(0, 12);
+        when(favoriteRepository.findByUser_Id(1L, pageable))
+                .thenReturn(Page.empty(pageable));
 
-        List<FavoriteResponse> result = favoriteService.getFavorites(1L);
+        Page<FavoriteResponse> result = favoriteService.getFavorites(1L, pageable);
 
-        assertThat(result).isEmpty();
+        assertThat(result.getContent()).isEmpty();
     }
 
     // ── isFavorite ───────────────────────────────────────────────────────────
