@@ -1,7 +1,9 @@
 package com.verdorabackend.controller;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -10,6 +12,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @Transactional
 class ProductControllerIntegrationTest extends BaseIntegrationTest {
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     // ── GET /products ─────────────────────────────────────────────────────────
 
@@ -694,6 +699,59 @@ class ProductControllerIntegrationTest extends BaseIntegrationTest {
                         .value(org.hamcrest.Matchers.containsString(
                                 "Product cannot be deleted"
                         )));
+    }
+
+    @Test
+    void getProductOfTheDay_equalBestDiscount_returnsStableProduct() throws Exception {
+
+        jdbcTemplate.update("UPDATE products SET discount_price = NULL");
+
+        jdbcTemplate.update(
+                """
+                        UPDATE products
+                        SET price = 1000.00,
+                            discount_price = 500.00
+                        WHERE product_id = 1
+                        """
+        );
+
+        jdbcTemplate.update(
+                """
+                        UPDATE products
+                        SET price = 2000.00,
+                            discount_price = 1000.00
+                        WHERE product_id = 2
+                        """
+        );
+
+        mockMvc.perform(get("/products/product-of-the-day"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.productId")
+                        .value(1))
+                .andExpect(jsonPath("$.data.name")
+                        .exists())
+                .andExpect(jsonPath("$.data.imageUrl")
+                        .exists())
+                .andExpect(jsonPath("$.data.price")
+                        .value(1000.00))
+                .andExpect(jsonPath("$.data.discountPrice")
+                        .value(500.00));
+
+        mockMvc.perform(get("/products/product-of-the-day"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.productId")
+                        .value(1));
+    }
+
+    @Test
+    void getProductOfTheDay_noDiscountedProducts_returns200() throws Exception {
+
+        jdbcTemplate.update("UPDATE products SET discount_price = NULL");
+
+        mockMvc.perform(get("/products/product-of-the-day"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.data").doesNotExist());
     }
 
 }
