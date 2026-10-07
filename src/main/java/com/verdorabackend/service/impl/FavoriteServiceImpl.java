@@ -51,14 +51,12 @@ public class FavoriteServiceImpl implements FavoriteService {
     public FavoriteStateResponse addFavorite(Long userId, Long productId) {
         log.debug("Adding productId={} to favorites for userId={}", productId, userId);
 
+        User user = userRepository.findByIdForUpdate(userId).orElseThrow(UserNotFoundException::new);
         FavoriteId favoriteId = new FavoriteId(userId, productId);
 
         if (favoriteRepository.existsById(favoriteId)) {
             throw new FavoriteAlreadyExistsException(productId);
         }
-
-        User user = userRepository.findById(userId)
-                .orElseThrow(UserNotFoundException::new);
 
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new ProductNotFoundException(productId));
@@ -78,6 +76,7 @@ public class FavoriteServiceImpl implements FavoriteService {
     public FavoriteStateResponse removeFavorite(Long userId, Long productId) {
         log.debug("Removing productId={} from favorites for userId={}", productId, userId);
 
+        userRepository.findByIdForUpdate(userId).orElseThrow(UserNotFoundException::new);
         FavoriteId favoriteId = new FavoriteId(userId, productId);
 
         if (!favoriteRepository.existsById(favoriteId)) {

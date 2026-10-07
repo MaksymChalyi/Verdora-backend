@@ -3,14 +3,17 @@ package com.verdorabackend.service.impl;
 import com.verdorabackend.dto.request.ProductRequest;
 import com.verdorabackend.dto.response.ProductResponse;
 import com.verdorabackend.entity.Category;
+import com.verdorabackend.entity.FavoriteId;
 import com.verdorabackend.entity.Product;
 import com.verdorabackend.exception.CategoryNotFoundException;
 import com.verdorabackend.exception.ProductDeletionException;
 import com.verdorabackend.exception.ProductNotFoundException;
 import com.verdorabackend.mapper.ProductMapper;
 import com.verdorabackend.repository.CategoryRepository;
+import com.verdorabackend.repository.FavoriteRepository;
 import com.verdorabackend.repository.ProductRepository;
 import com.verdorabackend.repository.specification.ProductSpecification;
+import com.verdorabackend.security.UserPrincipal;
 import com.verdorabackend.service.ProductService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,12 +21,16 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -33,6 +40,7 @@ public class ProductServiceImpl implements ProductService {
     private final ProductRepository productRepository;
     private final ProductMapper productMapper;
     private final CategoryRepository categoryRepository;
+    private final FavoriteRepository favoriteRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -44,21 +52,37 @@ public class ProductServiceImpl implements ProductService {
             String search,
             Pageable pageable
     ) {
-        log.debug("Fetching products: categoryId={}, minPrice={}, maxPrice={}, discount={}, search={}",
-                categoryId, minPrice, maxPrice, discount, search);
+        Specification<Product> spec = ProductSpecification.filter(categoryId, minPrice, maxPrice, discount, search);
+        Page<Product> products = productRepository.findAll(spec, pageable);
+        Long userId = currentUserId();
 
-        Specification<Product> spec = ProductSpecification.filter(
-                categoryId, minPrice, maxPrice, discount, search);
+        if (userId == null || products.isEmpty()) {
+            return products.map(product ->
+                    withFavorite(productMapper.toResponse(product), false)
+            );
+        }
 
-        return productRepository.findAll(spec, pageable)
-                .map(productMapper::toResponse);
+        Set<Long> productIds = products.getContent().stream()
+                .map(Product::getId)
+                .collect(Collectors.toSet());
+
+        Set<Long> favoriteIds = favoriteRepository.findFavoriteProductIds(userId, productIds);
+
+        return products.map(product ->
+                withFavorite(
+                        productMapper.toResponse(product),
+                        favoriteIds.contains(product.getId())
+                )
+        );
     }
 
     @Override
     @Transactional(readOnly = true)
     public ProductResponse getProduct(Long productId) {
-        log.debug("Fetching product id={}", productId);
-        return productMapper.toResponse(getByIdOrThrow(productId));
+        Product product = getByIdOrThrow(productId);
+        Long userId = currentUserId();
+        boolean favorite = userId != null && favoriteRepository.existsById(new FavoriteId(userId, productId));
+        return withFavorite(productMapper.toResponse(product), favorite);
     }
 
     @Override
@@ -145,4 +169,30 @@ public class ProductServiceImpl implements ProductService {
         return productRepository.findById(id)
                 .orElseThrow(() -> new ProductNotFoundException(id));
     }
+
+    private Long currentUserId() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication == null || !(authentication.getPrincipal() instanceof UserPrincipal principal)) {
+            return null;
+        }
+
+        return principal.getUser().getId();
+    }
+
+    private ProductResponse withFavorite(ProductResponse response, boolean favorite) {
+        return new ProductResponse(
+                response.productId(),
+                response.name(),
+                response.description(),
+                response.price(),
+                response.categoryId(),
+                response.imageUrl(),
+                response.discountPrice(),
+                response.createdAt(),
+                response.updatedAt(),
+                favorite
+        );
+    }
+
 }
