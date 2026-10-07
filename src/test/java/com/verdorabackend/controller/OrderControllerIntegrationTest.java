@@ -11,7 +11,7 @@ import org.springframework.http.MediaType;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
+import java.time.ZoneOffset;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -155,13 +155,20 @@ class OrderControllerIntegrationTest extends BaseIntegrationTest {
 
     @Test
     void getAllOrders_filterByDate_returnsMatchingOrders() throws Exception {
-        createOrder(OrderStatus.PENDING, BigDecimal.valueOf(100));
-        String today = LocalDate.now().toString();
+        Order order = createOrder(
+                OrderStatus.PENDING,
+                BigDecimal.valueOf(100)
+        );
+
+        String orderDate = order.getCreatedAt()
+                .withOffsetSameInstant(ZoneOffset.UTC)
+                .toLocalDate()
+                .toString();
 
         mockMvc.perform(get("/orders/all")
                         .cookie(adminCookie())
-                        .param("dateFrom", today)
-                        .param("dateTo", today))
+                        .param("dateFrom", orderDate)
+                        .param("dateTo", orderDate))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.content.length()").value(1));
     }
