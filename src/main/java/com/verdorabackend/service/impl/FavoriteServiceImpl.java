@@ -1,6 +1,7 @@
 package com.verdorabackend.service.impl;
 
 import com.verdorabackend.dto.response.FavoriteResponse;
+import com.verdorabackend.dto.response.FavoriteStateResponse;
 import com.verdorabackend.entity.Favorite;
 import com.verdorabackend.entity.FavoriteId;
 import com.verdorabackend.entity.Product;
@@ -49,7 +50,7 @@ public class FavoriteServiceImpl implements FavoriteService {
 
     @Override
     @Transactional
-    public FavoriteResponse addFavorite(Long userId, Long productId) {
+    public FavoriteStateResponse addFavorite(Long userId, Long productId) {
         log.debug("Adding productId={} to favorites for userId={}", productId, userId);
 
         FavoriteId favoriteId = new FavoriteId(userId, productId);
@@ -69,14 +70,14 @@ public class FavoriteServiceImpl implements FavoriteService {
         favorite.setUser(user);
         favorite.setProduct(product);
 
-        Favorite saved = favoriteRepository.save(favorite);
+        favoriteRepository.save(favorite);
         log.info("Added productId={} to favorites for userId={}", productId, userId);
-        return favoriteMapper.toResponse(saved);
+        return new FavoriteStateResponse(productId, true);
     }
 
     @Override
     @Transactional
-    public void removeFavorite(Long userId, Long productId) {
+    public FavoriteStateResponse removeFavorite(Long userId, Long productId) {
         log.debug("Removing productId={} from favorites for userId={}", productId, userId);
 
         FavoriteId favoriteId = new FavoriteId(userId, productId);
@@ -87,5 +88,6 @@ public class FavoriteServiceImpl implements FavoriteService {
 
         favoriteRepository.deleteById(favoriteId);
         log.info("Removed productId={} from favorites for userId={}", productId, userId);
+        return new FavoriteStateResponse(productId, false);
     }
 }

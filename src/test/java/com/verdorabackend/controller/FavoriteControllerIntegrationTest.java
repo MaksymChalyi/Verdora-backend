@@ -4,7 +4,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.transaction.annotation.Transactional;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @Transactional
 class FavoriteControllerIntegrationTest extends BaseIntegrationTest {
@@ -53,7 +54,8 @@ class FavoriteControllerIntegrationTest extends BaseIntegrationTest {
         mockMvc.perform(post("/favorites/1")
                         .cookie(userCookie()))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.data.productId").value(1));
+                .andExpect(jsonPath("$.data.productId").value(1))
+                .andExpect(jsonPath("$.data.favorite").value(true));
     }
 
     @Test
@@ -78,16 +80,57 @@ class FavoriteControllerIntegrationTest extends BaseIntegrationTest {
                 .andExpect(status().isUnauthorized());
     }
 
+    @Test
+    void addFavorite_afterAdding_appearsInFavoritesList() throws Exception {
+
+        mockMvc.perform(post("/favorites/1")
+                        .cookie(userCookie()))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(get("/favorites")
+                        .cookie(userCookie()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[*].productId")
+                        .value(org.hamcrest.Matchers.hasItem(1)));
+    }
+
+    @Test
+    void addFavorite_invalidProductId_returns400() throws Exception {
+
+        mockMvc.perform(post("/favorites/abc")
+                        .cookie(userCookie()))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void addFavorite_invalidToken_returns401() throws Exception {
+
+        mockMvc.perform(post("/favorites/1")
+                        .cookie(
+                                new jakarta.servlet.http.Cookie(
+                                        "accessToken",
+                                        "invalid-token"
+                                )
+                        ))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.status").value(401))
+                .andExpect(jsonPath("$.message").value("Unauthorized"));
+    }
+
     // ── DELETE /favorites/{productId} ─────────────────────────────────────────
 
     @Test
     void removeFavorite_exists_returns200() throws Exception {
-        mockMvc.perform(post("/favorites/1").cookie(userCookie()));
+        mockMvc.perform(post("/favorites/1")
+                .cookie(userCookie()));
 
         mockMvc.perform(delete("/favorites/1")
                         .cookie(userCookie()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.message").value("Removed from favorites"));
+                .andExpect(jsonPath("$.message")
+                        .value("Removed from favorites"))
+                .andExpect(jsonPath("$.data.productId").value(1))
+                .andExpect(jsonPath("$.data.favorite").value(false));
     }
 
     @Test
