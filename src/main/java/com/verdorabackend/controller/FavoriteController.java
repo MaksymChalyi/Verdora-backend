@@ -13,12 +13,15 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
@@ -30,17 +33,33 @@ public class FavoriteController {
 
     private final FavoriteService favoriteService;
 
-    @Operation(summary = "Get favorites", description = "Returns all favorite products of the current user")
-    @ApiResponse(responseCode = "200", description = "Favorites returned")
+    @Operation(
+            summary = "Get favorites",
+            description = "Returns paginated favorites. Order: most recently added first, "
+                    + "then lowest productId. Page starts at 0; default/max size is 12."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Page of favorites or empty page"),
+            @ApiResponse(responseCode = "400", description = "Invalid page or size"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized")
+    })
     @GetMapping
-    public ResponseEntity<BaseResponse<List<FavoriteResponse>>> getFavorites(
-            @AuthenticationPrincipal UserPrincipal principal) {
-        log.info("Request to get favorites for userId={}", principal.getUser().getId());
-
-        List<FavoriteResponse> response = favoriteService.getFavorites(principal.getUser().getId());
+    public ResponseEntity<BaseResponse<Page<FavoriteResponse>>> getFavorites(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PageableDefault(size = 12,
+                    sort = "createdAt",
+                    direction = Sort.Direction.DESC
+            ) Pageable pageable) {
+        Long userId = principal.getUser().getId();
+        Pageable limitedPageable = PageRequest.of(pageable.getPageNumber(), Math.min(pageable.getPageSize(), 12), pageable.getSort());
+        Page<FavoriteResponse> response =                favoriteService.getFavorites(userId, limitedPageable);
 
         return ResponseEntity.ok(
-                BaseResponseFactory.success(HttpStatus.OK, "Favorites fetched successfully", response)
+                BaseResponseFactory.success(
+                        HttpStatus.OK,
+                        "Favorites fetched successfully",
+                        response
+                )
         );
     }
 

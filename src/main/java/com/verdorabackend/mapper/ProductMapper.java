@@ -11,13 +11,20 @@ import org.mapstruct.MappingTarget;
 public interface ProductMapper {
 
     @Mapping(target = "id", ignore = true)
+    @Mapping(target = "category", ignore = true)
+    @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "updatedAt", ignore = true)
     Product toEntity(ProductRequest request);
 
     @Mapping(source = "id", target = "productId")
     @Mapping(source = "category.id", target = "categoryId")
+    @Mapping(target = "isFavorite", ignore = true)
     ProductResponse toResponse(Product product);
 
     @Mapping(target = "id", ignore = true)
+    @Mapping(target = "category", ignore = true)
+    @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "updatedAt", ignore = true)
     void updateProductFromRequest(
             ProductRequest request,
             @MappingTarget Product product

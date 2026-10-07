@@ -40,6 +40,12 @@ public record ProductResponse(
                 description = "Product last update timestamp",
                 example = "2026-05-03T12:10:00Z"
         )
-        OffsetDateTime updatedAt
+        OffsetDateTime updatedAt,
+
+        @Schema(
+                description = "Whether the authenticated user has favorited this product",
+                example = "false"
+        )
+        boolean isFavorite
 ) {
 }
