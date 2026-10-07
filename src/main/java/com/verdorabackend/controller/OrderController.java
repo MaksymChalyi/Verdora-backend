@@ -208,10 +208,16 @@ public class OrderController {
         );
     }
 
-    @Operation(summary = "Update order status", description = "Updates order status. ADMIN only")
+    @Operation(
+            summary = "Update order status",
+            description = "Updates order status using allowed status transitions. ADMIN only"
+    )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Status updated"),
-            @ApiResponse(responseCode = "404", description = "Order not found")
+            @ApiResponse(responseCode = "400", description = "Invalid request body or status value"),
+            @ApiResponse(responseCode = "403", description = "Forbidden"),
+            @ApiResponse(responseCode = "404", description = "Order not found"),
+            @ApiResponse(responseCode = "409", description = "Invalid order status transition")
     })
     @PreAuthorize("hasRole('ADMIN')")
     @PatchMapping("/{orderId}/status")
