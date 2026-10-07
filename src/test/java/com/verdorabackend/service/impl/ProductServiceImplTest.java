@@ -1,3 +1,4 @@
+
 package com.verdorabackend.service.impl;
 
 import com.verdorabackend.dto.request.ProductRequest;
@@ -9,7 +10,9 @@ import com.verdorabackend.exception.ProductDeletionException;
 import com.verdorabackend.exception.ProductNotFoundException;
 import com.verdorabackend.mapper.ProductMapper;
 import com.verdorabackend.repository.CategoryRepository;
+import com.verdorabackend.repository.FavoriteRepository;
 import com.verdorabackend.repository.ProductRepository;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentMatchers;
@@ -21,6 +24,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -43,8 +47,16 @@ class ProductServiceImplTest {
     @Mock
     private CategoryRepository categoryRepository;
 
+    @Mock
+    private FavoriteRepository favoriteRepository;
+
     @InjectMocks
     private ProductServiceImpl productService;
+
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
+    }
 
     @Test
     void getProducts_returnsMappedProducts() {
@@ -63,18 +75,18 @@ class ProductServiceImplTest {
                 .thenReturn(response);
 
         Page<ProductResponse> result = productService.getProducts(
-                null,
-                null,
-                null,
-                null,
-                null,
-                pageable
+                null, null, null, null, null, pageable
         );
 
         assertEquals(1, result.getTotalElements());
-        assertSame(response, result.getContent().getFirst());
+
+        ProductResponse actual = result.getContent().getFirst();
+
+        assertEquals(response.productId(), actual.productId());
+        assertFalse(actual.isFavorite());
 
         verify(productMapper).toResponse(product);
+        verifyNoInteractions(favoriteRepository);
     }
 
     @Test
@@ -90,10 +102,12 @@ class ProductServiceImplTest {
 
         ProductResponse result = productService.getProduct(1L);
 
-        assertSame(response, result);
+        assertEquals(response.productId(), result.productId());
+        assertFalse(result.isFavorite());
 
         verify(productRepository).findById(1L);
         verify(productMapper).toResponse(product);
+        verifyNoInteractions(favoriteRepository);
     }
 
     @Test
@@ -208,7 +222,11 @@ class ProductServiceImplTest {
         when(productRepository.findById(99999L))
                 .thenReturn(Optional.empty());
 
-        assertThrows(ProductNotFoundException.class, () -> productService.updateProduct(99999L, request));
+        assertThrows(
+                ProductNotFoundException.class,
+                () -> productService.updateProduct(99999L, request)
+        );
+
         verify(productRepository).findById(99999L);
         verify(productRepository, never()).save(any());
         verifyNoInteractions(productMapper, categoryRepository);
@@ -227,7 +245,10 @@ class ProductServiceImplTest {
         when(categoryRepository.findById(99999L))
                 .thenReturn(Optional.empty());
 
-        assertThrows(CategoryNotFoundException.class, () -> productService.updateProduct(1L, request));
+        assertThrows(
+                CategoryNotFoundException.class,
+                () -> productService.updateProduct(1L, request)
+        );
 
         verify(productMapper).updateProductFromRequest(request, product);
         verify(productRepository, never()).save(any());
@@ -250,7 +271,10 @@ class ProductServiceImplTest {
         when(productRepository.findById(99999L))
                 .thenReturn(Optional.empty());
 
-        assertThrows(ProductNotFoundException.class, () -> productService.deleteProduct(99999L));
+        assertThrows(
+                ProductNotFoundException.class,
+                () -> productService.deleteProduct(99999L)
+        );
 
         verify(productRepository, never()).delete(any(Product.class));
         verify(productRepository, never()).flush();
@@ -267,26 +291,24 @@ class ProductServiceImplTest {
                 .when(productRepository)
                 .flush();
 
-        ProductDeletionException exception = assertThrows(ProductDeletionException.class, () -> productService.deleteProduct(1L));
+        ProductDeletionException exception = assertThrows(
+                ProductDeletionException.class,
+                () -> productService.deleteProduct(1L)
+        );
 
-        assertEquals("Product cannot be deleted because it is currently in use, id=1", exception.getMessage());
+        assertEquals(
+                "Product cannot be deleted because it is currently in use, id=1",
+                exception.getMessage()
+        );
+
         verify(productRepository).delete(product);
         verify(productRepository).flush();
     }
 
     @Test
     void getProductOfTheDay_highestDiscountPercentage_returnsProduct() {
-        Product first = product(
-                1L,
-                "1000.00",
-                "700.00"
-        );
-
-        Product second = product(
-                2L,
-                "100.00",
-                "50.00"
-        );
+        Product first = product(1L, "1000.00", "700.00");
+        Product second = product(2L, "100.00", "50.00");
 
         ProductResponse response = mock(ProductResponse.class);
 
@@ -304,17 +326,8 @@ class ProductServiceImplTest {
 
     @Test
     void getProductOfTheDay_equalDiscount_usesLowestProductId() {
-        Product higherId = product(
-                2L,
-                "200.00",
-                "160.00"
-        );
-
-        Product lowerId = product(
-                1L,
-                "100.00",
-                "80.00"
-        );
+        Product higherId = product(2L, "200.00", "160.00");
+        Product lowerId = product(1L, "100.00", "80.00");
 
         ProductResponse response = mock(ProductResponse.class);
         when(productRepository.findDiscountedProducts()).thenReturn(List.of(higherId, lowerId));
@@ -340,11 +353,9 @@ class ProductServiceImplTest {
 
     private Product product(Long id, String price, String discountPrice) {
         Product product = new Product();
-
         product.setId(id);
         product.setPrice(new BigDecimal(price));
         product.setDiscountPrice(new BigDecimal(discountPrice));
-
         return product;
     }
 }
