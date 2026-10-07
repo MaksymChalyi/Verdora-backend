@@ -7,6 +7,7 @@ import com.verdorabackend.dto.response.OrderResponse;
 import com.verdorabackend.dto.response.OrderStatusResponse;
 import com.verdorabackend.entity.*;
 import com.verdorabackend.exception.CartIsEmptyException;
+import com.verdorabackend.exception.InvalidOrderStatusTransitionException;
 import com.verdorabackend.exception.OrderCannotBeCancelledException;
 import com.verdorabackend.exception.OrderNotFoundException;
 import com.verdorabackend.mapper.OrderMapper;
@@ -290,6 +291,7 @@ class OrderServiceImplTest {
 
     @Test
     void updateOrderStatus_validRequest_updatesStatus() {
+        order.setStatus(OrderStatus.PAID);
         UpdateOrderStatusRequest request = new UpdateOrderStatusRequest(OrderStatus.SHIPPED);
         when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
         when(orderRepository.save(any())).thenReturn(order);
@@ -307,6 +309,37 @@ class OrderServiceImplTest {
         when(orderRepository.findById(99L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> orderService.updateOrderStatus(99L, request)).isInstanceOf(OrderNotFoundException.class);
+    }
+
+    @Test
+    void updateOrderStatus_invalidTransition_throwsException() {
+        order.setStatus(OrderStatus.PENDING);
+        UpdateOrderStatusRequest request = new UpdateOrderStatusRequest(OrderStatus.DELIVERED);
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+
+        assertThatThrownBy(() -> orderService.updateOrderStatus(1L, request))
+                .isInstanceOf(InvalidOrderStatusTransitionException.class)
+                .hasMessage("Invalid order status transition: PENDING -> DELIVERED");
+    }
+
+    @Test
+    void updateOrderStatus_deliveredIsFinal_throwsException() {
+        order.setStatus(OrderStatus.DELIVERED);
+        UpdateOrderStatusRequest request = new UpdateOrderStatusRequest(OrderStatus.SHIPPED);
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+
+        assertThatThrownBy(() -> orderService.updateOrderStatus(1L, request))
+                .isInstanceOf(InvalidOrderStatusTransitionException.class);
+    }
+
+    @Test
+    void updateOrderStatus_cancelledIsFinal_throwsException() {
+        order.setStatus(OrderStatus.CANCELLED);
+        UpdateOrderStatusRequest request = new UpdateOrderStatusRequest(OrderStatus.PAID);
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+
+        assertThatThrownBy(() -> orderService.updateOrderStatus(1L, request))
+                .isInstanceOf(InvalidOrderStatusTransitionException.class);
     }
 
     // ── getOrderDetails ──────────────────────────────────────────────────────

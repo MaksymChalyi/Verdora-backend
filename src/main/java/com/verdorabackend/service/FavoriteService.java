@@ -1,6 +1,7 @@
 package com.verdorabackend.service;
 
 import com.verdorabackend.dto.response.FavoriteResponse;
+import com.verdorabackend.dto.response.FavoriteStateResponse;
 
 import java.util.List;
 
@@ -10,7 +11,7 @@ public interface FavoriteService {
 
     boolean isFavorite(Long userId, Long productId);
 
-    FavoriteResponse addFavorite(Long userId, Long productId);
+    FavoriteStateResponse addFavorite(Long userId, Long productId);
 
-    void removeFavorite(Long userId, Long productId);
+    FavoriteStateResponse removeFavorite(Long userId, Long productId);
 }

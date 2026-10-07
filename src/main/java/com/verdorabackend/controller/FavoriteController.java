@@ -3,6 +3,7 @@ package com.verdorabackend.controller;
 import com.verdorabackend.dto.response.BaseResponse;
 import com.verdorabackend.dto.response.BaseResponseFactory;
 import com.verdorabackend.dto.response.FavoriteResponse;
+import com.verdorabackend.dto.response.FavoriteStateResponse;
 import com.verdorabackend.security.UserPrincipal;
 import com.verdorabackend.service.FavoriteService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -58,43 +59,65 @@ public class FavoriteController {
         );
     }
 
-    @Operation(summary = "Add to favorites", description = "Adds a product to favorites")
+    @Operation(
+            summary = "Add to favorites",
+            description = "Adds a product to favorites and returns its updated favorite state"
+    )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "201", description = "Added to favorites"),
-            @ApiResponse(responseCode = "404", description = "Product not found"),
-            @ApiResponse(responseCode = "409", description = "Product already in favorites")
+            @ApiResponse(
+                    responseCode = "201",
+                    description = "Product added to favorites"
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "Unauthorized"
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Product not found"
+            ),
+            @ApiResponse(
+                    responseCode = "409",
+                    description = "Product already in favorites"
+            )
     })
     @PostMapping("/{productId}")
-    public ResponseEntity<BaseResponse<FavoriteResponse>> addFavorite(
+    public ResponseEntity<BaseResponse<FavoriteStateResponse>> addFavorite(
             @AuthenticationPrincipal UserPrincipal principal,
             @PathVariable Long productId) {
-        log.info("Request to add productId={} to favorites for userId={}",
-                productId, principal.getUser().getId());
-
-        FavoriteResponse response = favoriteService.addFavorite(
-                principal.getUser().getId(), productId);
-
+        log.info("Request to add productId={} to favorites for userId={}", productId, principal.getUser().getId());
+        FavoriteStateResponse response = favoriteService.addFavorite(principal.getUser().getId(), productId);
         return ResponseEntity.status(HttpStatus.CREATED).body(
                 BaseResponseFactory.success(HttpStatus.CREATED, "Added to favorites", response)
         );
     }
 
-    @Operation(summary = "Remove from favorites", description = "Removes a product from favorites")
+    @Operation(
+            summary = "Remove from favorites",
+            description = "Removes a product from favorites and returns its updated favorite state"
+    )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Removed from favorites"),
-            @ApiResponse(responseCode = "404", description = "Product not found in favorites")
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Product removed from favorites"
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "Unauthorized"
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Product not found in favorites"
+            )
     })
     @DeleteMapping("/{productId}")
-    public ResponseEntity<BaseResponse<Void>> removeFavorite(
+    public ResponseEntity<BaseResponse<FavoriteStateResponse>> removeFavorite(
             @AuthenticationPrincipal UserPrincipal principal,
             @PathVariable Long productId) {
-        log.info("Request to remove productId={} from favorites for userId={}",
-                productId, principal.getUser().getId());
-
-        favoriteService.removeFavorite(principal.getUser().getId(), productId);
-
+        log.info("Request to remove productId={} from favorites for userId={}", productId, principal.getUser().getId());
+        FavoriteStateResponse response = favoriteService.removeFavorite(principal.getUser().getId(), productId);
         return ResponseEntity.ok(
-                BaseResponseFactory.success(HttpStatus.OK, "Removed from favorites")
+                BaseResponseFactory.success(HttpStatus.OK, "Removed from favorites", response)
         );
     }
 

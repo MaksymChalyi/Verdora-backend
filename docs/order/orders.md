@@ -8,12 +8,15 @@
 
 | Статус | Опис |
 |---|---|
-| `PENDING` | Щойно оформлено, очікує обробки |
-| `PAID` | Оплачено |
-| `SHIPPED` | Відправлено |
-| `CANCELLED` | Скасовано |
+| `PENDING` | Pending payment |
+| `PAID` | Confirmed |
+| `SHIPPED` | In Transit |
+| `DELIVERED` | Delivered |
+| `CANCELLED` | Cancelled |
 
-Скасувати можна лише замовлення зі статусом `PENDING`. Змінювати статус вручну може тільки **ADMIN**.
+Backend повертає технічні enum-значення, а user-facing labels формуються на FE.
+
+Дозволені переходи: `PENDING → PAID`, `PENDING → CANCELLED`, `PAID → SHIPPED`, `PAID → CANCELLED`, `SHIPPED → DELIVERED`. `DELIVERED` і `CANCELLED` є фінальними статусами.
 
 ---
 
@@ -104,7 +107,7 @@
 
 ## DELETE /orders/{orderId}
 
-Скасовує замовлення. Можливо тільки якщо статус `PENDING`.
+Скасовує замовлення. Можливо тільки якщо статус `PENDING` або `PAID`.
 
 **Response 200** — повертає оновлене замовлення зі статусом `CANCELLED`
 
@@ -131,13 +134,15 @@
 }
 ```
 
-**Допустимі значення:** `PENDING`, `PAID`, `SHIPPED`, `CANCELLED`
+**Допустимі значення:** `PENDING`, `PAID`, `SHIPPED`, `DELIVERED`, `CANCELLED`
 
 **Response 200** — повертає оновлене замовлення
 
 **Response 403** — якщо не ADMIN
 
 **Response 404** — замовлення не знайдено
+
+**Response 409** — недопустимий перехід статусу
 
 ---
 
@@ -169,7 +174,8 @@
 - `priceAtPurchase` фіксується з поточної ціни товару **на момент оформлення** — якщо ціна зміниться пізніше, це не вплине на замовлення
 - Після `POST /orders` кошик **очищається автоматично**
 - Юзер бачить **тільки свої** замовлення — чужий `orderId` повертає 404
-- Скасувати можна тільки `PENDING` замовлення — решта повертає 409
+- Скасувати можна `PENDING` або `PAID` замовлення — решта повертає 409
+- Недопустимі переходи статусів повертають 409
 - Список замовлень відсортований **від найновіших** (`ORDER BY created_at DESC`)
 
 ---
@@ -197,8 +203,10 @@ flowchart TD
     O --> P([200 OK])
 
     ADMIN([Адмін]) --> Q[PATCH /orders/id/status]
-    Q --> R[Змінити статус на будь-який]
-    R --> S([200 OK])
+    Q --> R{Перехід валідний?}
+    R -- Ні --> T([409 Conflict])
+    R -- Так --> U[Оновити статус]
+    U --> S([200 OK])
 ```
 
 ## Діаграма статусів замовлення
@@ -207,10 +215,11 @@ flowchart TD
 stateDiagram-v2
     [*] --> PENDING : POST /orders
     PENDING --> PAID : PATCH status (ADMIN)
-    PENDING --> SHIPPED : PATCH status (ADMIN)
     PENDING --> CANCELLED : DELETE /orders/id (USER)\nабо PATCH status (ADMIN)
     PAID --> SHIPPED : PATCH status (ADMIN)
-    SHIPPED --> [*]
+    PAID --> CANCELLED : DELETE або PATCH
+    SHIPPED --> DELIVERED : PATCH status (ADMIN)
+    DELIVERED --> [*]
     CANCELLED --> [*]
 ```
 

@@ -7,6 +7,7 @@ import com.verdorabackend.entity.Order;
 import com.verdorabackend.entity.OrderItem;
 import com.verdorabackend.entity.OrderStatus;
 import com.verdorabackend.exception.CartIsEmptyException;
+import com.verdorabackend.exception.InvalidOrderStatusTransitionException;
 import com.verdorabackend.exception.OrderCannotBeCancelledException;
 import com.verdorabackend.exception.OrderNotFoundException;
 import com.verdorabackend.mapper.OrderMapper;
@@ -126,10 +127,10 @@ public class OrderServiceImpl implements OrderService {
             throw new OrderCannotBeCancelledException(orderId);
         }
 
-        if (order.getStatus() != OrderStatus.PENDING
-                && order.getStatus() != OrderStatus.PAID) {
+        if (!order.getStatus().canTransitionTo(OrderStatus.CANCELLED)) {
             throw new OrderCannotBeCancelledException(orderId, order.getStatus());
         }
+
         order.setStatus(OrderStatus.CANCELLED);
         log.info("Order cancelled: orderId={}, userId={}", orderId, userId);
 
@@ -143,9 +144,16 @@ public class OrderServiceImpl implements OrderService {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new OrderNotFoundException(orderId));
 
-        order.setStatus(request.status());
+        OrderStatus currentStatus = order.getStatus();
+        OrderStatus newStatus = request.status();
+
+        if (!currentStatus.canTransitionTo(newStatus)) {
+            throw new InvalidOrderStatusTransitionException(currentStatus, newStatus);
+        }
+
+        order.setStatus(newStatus);
         Order saved = orderRepository.save(order);
-        log.info("Order status updated, id={}, status={}", orderId, request.status());
+        log.info("Order status updated, id={}, status={}", orderId, newStatus);
         return buildOrderResponse(saved);
     }
 

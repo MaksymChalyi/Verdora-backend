@@ -11,7 +11,7 @@ import org.springframework.http.MediaType;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
+import java.time.ZoneOffset;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -155,13 +155,20 @@ class OrderControllerIntegrationTest extends BaseIntegrationTest {
 
     @Test
     void getAllOrders_filterByDate_returnsMatchingOrders() throws Exception {
-        createOrder(OrderStatus.PENDING, BigDecimal.valueOf(100));
-        String today = LocalDate.now().toString();
+        Order order = createOrder(
+                OrderStatus.PENDING,
+                BigDecimal.valueOf(100)
+        );
+
+        String orderDate = order.getCreatedAt()
+                .withOffsetSameInstant(ZoneOffset.UTC)
+                .toLocalDate()
+                .toString();
 
         mockMvc.perform(get("/orders/all")
                         .cookie(adminCookie())
-                        .param("dateFrom", today)
-                        .param("dateTo", today))
+                        .param("dateFrom", orderDate)
+                        .param("dateTo", orderDate))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.content.length()").value(1));
     }
@@ -247,6 +254,27 @@ class OrderControllerIntegrationTest extends BaseIntegrationTest {
     void getOrder_withoutAuthentication_returns401() throws Exception {
         mockMvc.perform(get("/orders/1"))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void orderStatus_isConsistentAcrossHistoryDetailsAndTracking() throws Exception {
+        Order order = createOrder(OrderStatus.PAID, BigDecimal.valueOf(200));
+
+        mockMvc.perform(get("/orders")
+                        .cookie(userCookie()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content[0].orderId").value(order.getId()))
+                .andExpect(jsonPath("$.data.content[0].status").value("PAID"));
+
+        mockMvc.perform(get("/orders/{orderId}", order.getId())
+                        .cookie(userCookie()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("PAID"));
+
+        mockMvc.perform(get("/orders/{orderId}/status", order.getId())
+                        .cookie(userCookie()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("PAID"));
     }
 
     @Test
@@ -390,6 +418,38 @@ class OrderControllerIntegrationTest extends BaseIntegrationTest {
     // ── PATCH /orders/{id}/status ─────────────────────────────────────────────
 
     @Test
+    void updateOrderStatus_pendingToPaid_returns200() throws Exception {
+        Order order = createOrder(OrderStatus.PENDING, BigDecimal.valueOf(100));
+
+        mockMvc.perform(patch("/orders/{orderId}/status", order.getId())
+                        .cookie(adminCookie())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "status": "PAID"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("PAID"));
+    }
+
+    @Test
+    void updateOrderStatus_paidToShipped_returns200() throws Exception {
+        Order order = createOrder(OrderStatus.PAID, BigDecimal.valueOf(100));
+
+        mockMvc.perform(patch("/orders/{orderId}/status", order.getId())
+                        .cookie(adminCookie())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "status": "SHIPPED"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("SHIPPED"));
+    }
+
+    @Test
     void updateOrderStatus_shippedToDelivered_returns200() throws Exception {
         Order order = createOrder(OrderStatus.SHIPPED, BigDecimal.valueOf(100));
 
@@ -403,6 +463,53 @@ class OrderControllerIntegrationTest extends BaseIntegrationTest {
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value("DELIVERED"));
+    }
+
+    @Test
+    void updateOrderStatus_pendingToDelivered_returns409() throws Exception {
+        Order order = createOrder(OrderStatus.PENDING, BigDecimal.valueOf(100));
+
+        mockMvc.perform(patch("/orders/{orderId}/status", order.getId())
+                        .cookie(adminCookie())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "status": "DELIVERED"
+                                }
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message")
+                        .value("Invalid order status transition: PENDING -> DELIVERED"));
+    }
+
+    @Test
+    void updateOrderStatus_deliveredToShipped_returns409() throws Exception {
+        Order order = createOrder(OrderStatus.DELIVERED, BigDecimal.valueOf(100));
+
+        mockMvc.perform(patch("/orders/{orderId}/status", order.getId())
+                        .cookie(adminCookie())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "status": "SHIPPED"
+                                }
+                                """))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    void updateOrderStatus_cancelledToPaid_returns409() throws Exception {
+        Order order = createOrder(OrderStatus.CANCELLED, BigDecimal.valueOf(100));
+
+        mockMvc.perform(patch("/orders/{orderId}/status", order.getId())
+                        .cookie(adminCookie())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "status": "PAID"
+                                }
+                                """))
+                .andExpect(status().isConflict());
     }
 
     @Test

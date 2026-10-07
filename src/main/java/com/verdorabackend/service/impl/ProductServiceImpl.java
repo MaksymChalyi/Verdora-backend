@@ -20,10 +20,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.ThreadLocalRandom;
-import java.math.BigDecimal;
 
 @Service
 @RequiredArgsConstructor
@@ -115,22 +115,14 @@ public class ProductServiceImpl implements ProductService {
         }
 
         Product selected = discountedProducts.getFirst();
-        int equalBestCount = 1;
 
         for (int i = 1; i < discountedProducts.size(); i++) {
             Product current = discountedProducts.get(i);
 
             int comparison = compareDiscountPercentage(current, selected);
 
-            if (comparison > 0) {
+            if (comparison > 0 || (comparison == 0 && current.getId().compareTo(selected.getId()) < 0)) {
                 selected = current;
-                equalBestCount = 1;
-            } else if (comparison == 0) {
-                equalBestCount++;
-
-                if (ThreadLocalRandom.current().nextInt(equalBestCount) == 0) {
-                    selected = current;
-                }
             }
         }
 

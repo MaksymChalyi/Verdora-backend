@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.support.MissingServletRequestPartException;
-
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -118,6 +118,20 @@ public class GlobalExceptionHandler {
                         HttpStatus.INTERNAL_SERVER_ERROR,
                         "Internal server error"
                 ));
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<BaseResponse<Void>> handleMethodArgumentTypeMismatch(
+            MethodArgumentTypeMismatchException exception
+    ) {
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(
+                        BaseResponseFactory.error(
+                                HttpStatus.BAD_REQUEST,
+                                "Invalid path parameter"
+                        )
+                );
     }
 
 }

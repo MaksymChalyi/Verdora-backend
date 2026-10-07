@@ -1,7 +1,11 @@
 package com.verdorabackend.service.impl;
 
 import com.verdorabackend.dto.response.FavoriteResponse;
-import com.verdorabackend.entity.*;
+import com.verdorabackend.dto.response.FavoriteStateResponse;
+import com.verdorabackend.entity.Favorite;
+import com.verdorabackend.entity.FavoriteId;
+import com.verdorabackend.entity.Product;
+import com.verdorabackend.entity.User;
 import com.verdorabackend.exception.FavoriteAlreadyExistsException;
 import com.verdorabackend.exception.FavoriteNotFoundException;
 import com.verdorabackend.exception.ProductNotFoundException;
@@ -29,10 +33,14 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class FavoriteServiceImplTest {
 
-    @Mock private FavoriteRepository favoriteRepository;
-    @Mock private ProductRepository productRepository;
-    @Mock private UserRepository userRepository;
-    @Mock private FavoriteMapper favoriteMapper;
+    @Mock
+    private FavoriteRepository favoriteRepository;
+    @Mock
+    private ProductRepository productRepository;
+    @Mock
+    private UserRepository userRepository;
+    @Mock
+    private FavoriteMapper favoriteMapper;
 
     @InjectMocks
     private FavoriteServiceImpl favoriteService;
@@ -110,17 +118,14 @@ class FavoriteServiceImplTest {
 
     @Test
     void addFavorite_newFavorite_addsSuccessfully() {
-        FavoriteResponse response = mockFavoriteResponse();
-
         when(favoriteRepository.existsById(favoriteId)).thenReturn(false);
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
         when(productRepository.findById(1L)).thenReturn(Optional.of(product));
-        when(favoriteRepository.save(any())).thenReturn(favorite);
-        when(favoriteMapper.toResponse(favorite)).thenReturn(response);
 
-        FavoriteResponse result = favoriteService.addFavorite(1L, 1L);
+        FavoriteStateResponse result = favoriteService.addFavorite(1L, 1L);
 
-        assertThat(result).isNotNull();
+        assertThat(result.productId()).isEqualTo(1L);
+        assertThat(result.favorite()).isTrue();
         verify(favoriteRepository).save(any(Favorite.class));
     }
 
@@ -150,8 +155,10 @@ class FavoriteServiceImplTest {
     void removeFavorite_exists_removesSuccessfully() {
         when(favoriteRepository.existsById(favoriteId)).thenReturn(true);
 
-        favoriteService.removeFavorite(1L, 1L);
+        FavoriteStateResponse result = favoriteService.removeFavorite(1L, 1L);
 
+        assertThat(result.productId()).isEqualTo(1L);
+        assertThat(result.favorite()).isFalse();
         verify(favoriteRepository).deleteById(favoriteId);
     }
 

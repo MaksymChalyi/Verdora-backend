@@ -22,6 +22,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
@@ -271,5 +272,79 @@ class ProductServiceImplTest {
         assertEquals("Product cannot be deleted because it is currently in use, id=1", exception.getMessage());
         verify(productRepository).delete(product);
         verify(productRepository).flush();
+    }
+
+    @Test
+    void getProductOfTheDay_highestDiscountPercentage_returnsProduct() {
+        Product first = product(
+                1L,
+                "1000.00",
+                "700.00"
+        );
+
+        Product second = product(
+                2L,
+                "100.00",
+                "50.00"
+        );
+
+        ProductResponse response = mock(ProductResponse.class);
+
+        when(productRepository.findDiscountedProducts()).thenReturn(List.of(first, second));
+
+        when(productMapper.toResponse(second)).thenReturn(response);
+
+        Optional<ProductResponse> result = productService.getProductOfTheDay();
+
+        assertTrue(result.isPresent());
+        assertSame(response, result.orElseThrow());
+
+        verify(productMapper).toResponse(second);
+    }
+
+    @Test
+    void getProductOfTheDay_equalDiscount_usesLowestProductId() {
+        Product higherId = product(
+                2L,
+                "200.00",
+                "160.00"
+        );
+
+        Product lowerId = product(
+                1L,
+                "100.00",
+                "80.00"
+        );
+
+        ProductResponse response = mock(ProductResponse.class);
+        when(productRepository.findDiscountedProducts()).thenReturn(List.of(higherId, lowerId));
+        when(productMapper.toResponse(lowerId)).thenReturn(response);
+
+        Optional<ProductResponse> result = productService.getProductOfTheDay();
+
+        assertTrue(result.isPresent());
+        assertSame(response, result.orElseThrow());
+
+        verify(productMapper).toResponse(lowerId);
+    }
+
+    @Test
+    void getProductOfTheDay_noDiscountedProducts_returnsEmpty() {
+        when(productRepository.findDiscountedProducts()).thenReturn(List.of());
+
+        Optional<ProductResponse> result = productService.getProductOfTheDay();
+
+        assertTrue(result.isEmpty());
+        verifyNoInteractions(productMapper);
+    }
+
+    private Product product(Long id, String price, String discountPrice) {
+        Product product = new Product();
+
+        product.setId(id);
+        product.setPrice(new BigDecimal(price));
+        product.setDiscountPrice(new BigDecimal(discountPrice));
+
+        return product;
     }
 }

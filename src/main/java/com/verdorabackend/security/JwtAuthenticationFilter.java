@@ -1,5 +1,7 @@
 package com.verdorabackend.security;
 
+import com.verdorabackend.exception.InvalidTokenException;
+import com.verdorabackend.exception.TokenExpiredException;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -47,7 +49,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     SecurityContextHolder.getContext().setAuthentication(authenticationToken);
                 }
             }
-        } catch (JwtException | IllegalArgumentException | AuthenticationException exception) {
+        } catch (InvalidTokenException
+                 | TokenExpiredException
+                 | JwtException
+                 | IllegalArgumentException
+                 | AuthenticationException exception) {
+
             SecurityContextHolder.clearContext();
         }
         filterChain.doFilter(request, response);
