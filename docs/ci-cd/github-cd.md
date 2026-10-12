@@ -1,5 +1,7 @@
 # GitHub Actions — CD
 
+> **Примітка аудиту документації (2026-10-08):** станом на поточний стан репозиторію каталог `.github/workflows/` (і файл `cd.yml`, описаний нижче) **відсутній**, так само як і `Dockerfile`/`docker-compose.yml`, на які спирається цей флоу деплою. Цей документ описує заплановану CD-конфігурацію через Render Deploy Hook, а не те, що фактично налаштоване в репозиторії зараз.
+
 ## What is CD
 
 **CD (Continuous Deployment)** — automatically deploys code to production after every merge into `main`. No manual steps — merge happens, and within minutes the new version is live on the server.

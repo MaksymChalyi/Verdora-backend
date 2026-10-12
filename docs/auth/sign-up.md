@@ -1,35 +1,37 @@
 # Sign Up
 
-## Overview
+## Огляд
 
-Registers a new user. Upon successful registration the user is immediately authenticated — `accessToken` and `refreshToken` cookies are set, so a separate login step is not required.
+Реєструє нового користувача. Після успішної реєстрації користувач одразу автентифікований — встановлюються cookies `accessToken` і `refreshToken`, тож окремий крок логіну не потрібен.
 
-## Endpoint
+## Ендпоінт
 
 ```
 POST /auth/register
 Content-Type: application/json
 ```
 
-### Request body
+### Тіло запиту
 
 ```json
 {
   "name": "Stepan",
   "email": "user@gmail.com",
   "phone": "+380989703417",
-  "password": "12345678"
+  "password": "StrongPass1!"
 }
 ```
 
-| Field | Required | Validation |
+| Поле | Обов'язкове | Валідація (`SignUpRequest`) |
 |---|---|---|
-| `name` | ✅ | — |
-| `email` | ✅ | valid email format |
-| `phone` | ❌ | `+?[0-9]{7,15}` |
-| `password` | ✅ | 8–20 characters |
+| `name` | ✅ | не порожнє, мінімум 2 символи |
+| `email` | ✅ | коректний формат email |
+| `phone` | ❌ | без явної валідації формату на рівні DTO (поле опціональне) |
+| `password` | ✅ | 8–20 символів; має містити хоча б одну велику літеру, одну малу, одну цифру і один спецсимвол із `!@#$%` |
 
-### Success response `201`
+> У сутності `User` поле `phoneNumber` має власний `@Pattern` (`^$|^\+?[0-9]{7,15}$`), але ця перевірка спрацьовує лише при збереженні через Hibernate bean-validation, а не як контрольована `400`-відповідь від контролера — тобто помилка формату телефону на цьому етапі не гарантовано повертає чистий `400 Bad Request`.
+
+### Успішна відповідь `201`
 
 ```json
 {
@@ -42,14 +44,14 @@ Content-Type: application/json
 }
 ```
 
-Cookies set automatically:
+Cookies, що встановлюються автоматично:
 
-| Cookie | HttpOnly | Path | Max-Age |
-|---|---|---|---|
-| `accessToken` | ✅ | `/` | 1 hour |
-| `refreshToken` | ✅ | `/auth/refresh` | 7 days |
+| Cookie | HttpOnly | Secure | SameSite | Path | Max-Age cookie / термін дії JWT |
+|---|---|---|---|---|---|
+| `accessToken` | ✅ | ✅ | None | `/` | 1 година / **15 хвилин** |
+| `refreshToken` | ✅ | ✅ | None | `/auth/refresh` | 7 днів / 7 днів |
 
-### Error response `400`
+### Помилка `400`
 
 ```json
 {
@@ -69,33 +71,36 @@ sequenceDiagram
     participant AuthController
     participant AuthServiceImpl
     participant UserRepository
+    participant UserMapper
     participant PasswordEncoder
     participant JwtService
     participant CookieService
 
-    User->>Frontend: Fill registration form
+    User->>Frontend: Заповнити форму реєстрації
     Frontend->>AuthController: POST /auth/register { name, email, phone, password }
 
     AuthController->>AuthServiceImpl: signup(SignUpRequest)
 
     AuthServiceImpl->>UserRepository: existsByEmail(email)
-    alt Email already taken
+    alt Email вже зайнятий
         UserRepository-->>AuthServiceImpl: true
         AuthServiceImpl-->>AuthController: UserAlreadyExistsException
         AuthController-->>Frontend: 400 "Email already exists"
-    else Email is free
+    else Email вільний
         UserRepository-->>AuthServiceImpl: false
+        AuthServiceImpl->>UserMapper: toEntity(request)
+        UserMapper-->>AuthServiceImpl: User (без passwordHash, role)
         AuthServiceImpl->>PasswordEncoder: encode(password)
         PasswordEncoder-->>AuthServiceImpl: passwordHash
 
-        AuthServiceImpl->>UserRepository: save(User{ email, name, phone, passwordHash, role=USER })
-        UserRepository-->>AuthServiceImpl: saved User
+        AuthServiceImpl->>UserRepository: save(User{ email, name, phoneNumber, passwordHash, role=USER })
+        UserRepository-->>AuthServiceImpl: збережений User
 
         AuthServiceImpl->>JwtService: generateAccessToken(UserPrincipal)
-        JwtService-->>AuthServiceImpl: accessToken (15 min)
+        JwtService-->>AuthServiceImpl: accessToken (15 хв)
 
         AuthServiceImpl->>JwtService: generateRefreshToken(UserPrincipal)
-        JwtService-->>AuthServiceImpl: refreshToken (7 days)
+        JwtService-->>AuthServiceImpl: refreshToken (7 днів)
 
         AuthServiceImpl-->>AuthController: AuthResult { email, accessToken, refreshToken }
 
@@ -104,22 +109,22 @@ sequenceDiagram
         CookieService-->>Frontend: Set-Cookie: accessToken, refreshToken (HttpOnly)
 
         AuthController-->>Frontend: 201 { email }
-        Frontend-->>User: Redirect to home (authenticated)
+        Frontend-->>User: Перенаправлення на головну (автентифікований)
     end
 ```
 
-## How It Works
+## Як це працює
 
-### 1. Validation at the controller level
+### 1. Валідація на рівні контролера
 
 ```java
 @PostMapping("/register")
 public ResponseEntity<...> signup(@Valid @RequestBody SignUpRequest request, ...)
 ```
 
-`@Valid` triggers Spring's bean validation before the method body even runs. If `password` is shorter than 8 characters or `email` has an invalid format — Spring immediately returns `400` without entering the method.
+`@Valid` запускає Spring bean-валідацію ще до виконання тіла методу. Якщо `password` коротший за 8 символів, не відповідає шаблону складності, або `email` має невалідний формат — Spring одразу повертає `400`, не заходячи в метод.
 
-### 2. Duplicate email check
+### 2. Перевірка дубліката email
 
 ```java
 if (userRepository.existsByEmail(request.email())) {
@@ -127,34 +132,34 @@ if (userRepository.existsByEmail(request.email())) {
 }
 ```
 
-A single query to the database to check if this email is already taken. If it is — an exception is thrown, caught by `GlobalExceptionHandler`, and a `400` is returned. This check happens before any other work to avoid unnecessary processing.
+Один запит до бази даних, щоб перевірити, чи email вже зайнятий. Якщо так — кидається виняток, його перехоплює `GlobalExceptionHandler`, і повертається `400`. Ця перевірка відбувається першою, щоб уникнути зайвої роботи.
 
-### 3. Mapping the request to an entity
+### 3. Мапінг запиту в сутність
 
 ```java
 User user = userMapper.toEntity(request);
 ```
 
-`UserMapper` (MapStruct) converts `SignUpRequest` → `User` entity, copying `name`, `email`, and `phone`. MapStruct generates this code at compile time — no reflection, no manual field-by-field assignment.
+`UserMapper` (MapStruct) конвертує `SignUpRequest` → сутність `User`, копіюючи `name`, `email` і мапуючи `phone` → `phoneNumber`. Поля `passwordHash`, `role`, `createdAt`, `updatedAt` ігноруються мапером і встановлюються окремо. MapStruct генерує цей код на етапі компіляції — без рефлексії, без ручного присвоєння полів.
 
-### 4. Password hashing
+### 4. Хешування пароля
 
 ```java
 user.setPasswordHash(passwordEncoder.encode(request.password()));
 ```
 
-BCrypt transforms `"12345678"` into something like `"$2a$10$xJwL5v..."`. Only the **hash** is stored in the database — the raw password is never persisted. BCrypt is a one-way function, meaning the original password cannot be recovered from the hash.
+BCrypt перетворює `"StrongPass1!"` у щось подібне до `"$2a$10$xJwL5v..."`. У базі даних зберігається лише **хеш** — сирий пароль ніколи не персистується. BCrypt — одностороння функція: відновити оригінальний пароль з хешу неможливо.
 
-### 5. Saving the user
+### 5. Збереження користувача
 
 ```java
 user.setRole(Role.USER);
 userRepository.save(user);
 ```
 
-JPA persists the user to the `users` table. The `@PrePersist` lifecycle hook automatically sets `createdAt` and `updatedAt` to the current UTC time before the insert.
+JPA зберігає користувача в таблицю `users`. Lifecycle-хук `@PrePersist` автоматично встановлює `createdAt` і `updatedAt` на поточний UTC-час перед insert.
 
-### 6. Token generation and cookies
+### 6. Генерація токенів і cookies
 
 ```java
 UserPrincipal principal = new UserPrincipal(user);
@@ -162,25 +167,25 @@ String accessToken = jwtService.generateAccessToken(principal);
 String refreshToken = jwtService.generateRefreshToken(principal);
 ```
 
-`UserPrincipal` is a wrapper around `User` that implements Spring Security's `UserDetails` interface. `JwtService` signs a JWT with `subject = email`, `type = "access"/"refresh"`, and an expiration time. Both tokens are then written to `HttpOnly` cookies on the response — the user is authenticated immediately after registration.
+`UserPrincipal` — обгортка над `User`, що реалізує інтерфейс Spring Security `UserDetails`. `JwtService` підписує JWT з `subject = email`, `type = "access"/"refresh"` і терміном дії. Обидва токени записуються в `HttpOnly` cookies на відповіді — користувач автентифікований одразу після реєстрації.
 
-### Key difference from Sign In
+### Ключова відмінність від Sign In
 
-Sign Up does not use `AuthenticationManager`. There are no credentials to verify — we create the user ourselves, hash the password, and issue tokens directly. Sign In, on the other hand, delegates credential verification entirely to Spring Security.
+Sign Up не використовує `AuthenticationManager`. Тут немає облікових даних для перевірки — користувач створюється самостійно, пароль хешується, і токени видаються напряму. Sign In, навпаки, повністю делегує перевірку облікових даних Spring Security.
 
-## User Entity
+## Сутність User
 
 ```java
 User {
-  id          Long          // auto-generated
-  name        String        // max 256 chars
-  email       String        // unique, max 256 chars
-  phoneNumber String        // optional, +7-15 digits
-  passwordHash String       // BCrypt hash
-  role        Role          // USER (default)
-  createdAt   OffsetDateTime
-  updatedAt   OffsetDateTime
+  id           Long           // auto-generated
+  name         String         // max 256 символів
+  email        String         // унікальний, max 256 символів
+  phoneNumber  String         // опціональний, @Pattern "^$|^\+?[0-9]{7,15}$"
+  passwordHash String         // BCrypt-хеш
+  role         Role           // USER (за замовчуванням для /auth/register)
+  createdAt    OffsetDateTime
+  updatedAt    OffsetDateTime
 }
 ```
 
-> Google OAuth users are registered with `passwordHash = "GOOGLE_OAUTH2_USER"` — they cannot log in via the email/password form.
+> Користувачі, що зареєструвались через Google OAuth, отримують `passwordHash = "GOOGLE_OAUTH2_USER"` — вони не можуть логінитись через email/пароль форму.

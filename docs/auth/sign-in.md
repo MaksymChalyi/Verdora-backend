@@ -1,17 +1,17 @@
 # Sign In
 
-## Overview
+## Огляд
 
-Standard email/password authentication. Upon success, two `HttpOnly` cookies are set — `accessToken` and `refreshToken`.
+Стандартна автентифікація за email та паролем. Після успішного логіну встановлюються два `HttpOnly` cookies — `accessToken` і `refreshToken`.
 
-## Endpoint
+## Ендпоінт
 
 ```
 POST /auth/login
 Content-Type: application/json
 ```
 
-### Request body
+### Тіло запиту
 
 ```json
 {
@@ -20,7 +20,9 @@ Content-Type: application/json
 }
 ```
 
-### Success response `200`
+`SignInRequest` валідується анотаціями `@NotBlank` на обох полях і `@Email` на `email`.
+
+### Успішна відповідь `200`
 
 ```json
 {
@@ -33,14 +35,14 @@ Content-Type: application/json
 }
 ```
 
-Cookies set automatically:
+Cookies, що встановлюються автоматично:
 
-| Cookie | HttpOnly | Path | Max-Age |
-|---|---|---|---|
-| `accessToken` | ✅ | `/` | 1 hour |
-| `refreshToken` | ✅ | `/auth/refresh` | 7 days |
+| Cookie | HttpOnly | Secure | SameSite | Path | Max-Age cookie / термін дії JWT |
+|---|---|---|---|---|---|
+| `accessToken` | ✅ | ✅ | None | `/` | 1 година / **15 хвилин** |
+| `refreshToken` | ✅ | ✅ | None | `/auth/refresh` | 7 днів / 7 днів |
 
-### Error response `401`
+### Помилка `401`
 
 ```json
 {
@@ -58,46 +60,51 @@ sequenceDiagram
     actor User
     participant Frontend
     participant AuthController
+    participant AuthServiceImpl
     participant AuthenticationManager
     participant CustomUserDetailsService
     participant UserRepository
     participant JwtService
     participant CookieService
 
-    User->>Frontend: Enter email + password
+    User->>Frontend: Ввести email + пароль
     Frontend->>AuthController: POST /auth/login
 
-    AuthController->>AuthenticationManager: authenticate(email, password)
+    AuthController->>AuthServiceImpl: login(SignInRequest)
+
+    AuthServiceImpl->>AuthenticationManager: authenticate(email, password)
     AuthenticationManager->>CustomUserDetailsService: loadUserByUsername(email)
     CustomUserDetailsService->>UserRepository: findUserByEmail(email)
-    UserRepository-->>CustomUserDetailsService: User entity
+    UserRepository-->>CustomUserDetailsService: сутність User
     CustomUserDetailsService-->>AuthenticationManager: UserPrincipal
-    AuthenticationManager-->>AuthController: Authentication OK (PasswordEncoder verified hash)
+    AuthenticationManager-->>AuthServiceImpl: Authentication OK (PasswordEncoder перевірив хеш)
 
-    AuthController->>UserRepository: findUserByEmail(email)
-    UserRepository-->>AuthController: User entity
+    AuthServiceImpl->>UserRepository: findUserByEmail(email)
+    UserRepository-->>AuthServiceImpl: сутність User
 
-    AuthController->>JwtService: generateAccessToken(UserPrincipal)
-    JwtService-->>AuthController: accessToken (15 min)
+    AuthServiceImpl->>JwtService: generateAccessToken(UserPrincipal)
+    JwtService-->>AuthServiceImpl: accessToken (15 хв)
 
-    AuthController->>JwtService: generateRefreshToken(UserPrincipal)
-    JwtService-->>AuthController: refreshToken (7 days)
+    AuthServiceImpl->>JwtService: generateRefreshToken(UserPrincipal)
+    JwtService-->>AuthServiceImpl: refreshToken (7 днів)
+
+    AuthServiceImpl-->>AuthController: AuthResult { email, accessToken, refreshToken }
 
     AuthController->>CookieService: addAccessToken(response, accessToken)
     AuthController->>CookieService: addRefreshToken(response, refreshToken)
     CookieService-->>Frontend: Set-Cookie: accessToken, refreshToken (HttpOnly)
 
     AuthController-->>Frontend: 200 { email }
-    Frontend-->>User: Redirect to home
+    Frontend-->>User: Перенаправлення на головну
 ```
 
-## How It Works
+## Як це працює
 
-### 1. Request arrives at `AuthController`
+### 1. Запит потрапляє в `AuthController`
 
-The request hits `AuthController.login()`. Unlike `/register`, there is **no `@Valid` annotation** here — format validation of email and password does not happen at this stage. If an empty string is passed, it will simply proceed and fail at the authentication level.
+Запит досягає `AuthController.login()`, який одразу делегує роботу `AuthService.login(request)`. На відміну від `/auth/register`, тут **немає анотації `@Valid`** на рівні контролера — формальна валідація email/пароля (крім `@NotBlank`/`@Email` у самому DTO) тут не відбувається додатково; невідповідність облікових даних обробляється на рівні автентифікації.
 
-### 2. `AuthenticationManager` — the core of the flow
+### 2. `AuthenticationManager` — ядро флоу (`AuthServiceImpl.login`)
 
 ```java
 authenticationManager.authenticate(
@@ -105,74 +112,75 @@ authenticationManager.authenticate(
 );
 ```
 
-This single line triggers a full internal chain:
+Цей один рядок запускає повний внутрішній ланцюжок:
 
-`AuthenticationManager` → delegates to `DaoAuthenticationProvider` → calls `CustomUserDetailsService.loadUserByUsername(email)` → loads the user from the database and returns a `UserPrincipal` → `DaoAuthenticationProvider` takes `getPassword()` from `UserPrincipal` (the BCrypt hash) and uses `PasswordEncoder.matches(rawPassword, hash)` to compare it with the incoming password.
+`AuthenticationManager` → делегує `DaoAuthenticationProvider` → викликає `CustomUserDetailsService.loadUserByUsername(email)` → завантажує користувача з бази даних і повертає `UserPrincipal` → `DaoAuthenticationProvider` бере `getPassword()` з `UserPrincipal` (BCrypt-хеш) і через `PasswordEncoder.matches(rawPassword, hash)` порівнює його з вхідним паролем.
 
-If the password does not match — `BadCredentialsException` is thrown, caught by `GlobalExceptionHandler`, and a `401` is returned.
+Якщо пароль не збігається — кидається `BadCredentialsException`, його перехоплює `GlobalExceptionHandler`, і повертається `401`.
 
-### 3. Second database call
+### 3. Повторний запит до бази даних
 
 ```java
 User user = userRepository.findUserByEmail(request.email())
         .orElseThrow(InvalidCredentialsException::new);
 ```
 
-Even though `CustomUserDetailsService` already fetched the user during authentication, that result is not reused here. `AuthenticationManager.authenticate()` returns an `Authentication` object that we don't store, so we fetch the `User` entity again to build a `UserPrincipal` for token generation.
+Хоча `CustomUserDetailsService` вже завантажував користувача під час автентифікації, цей результат тут повторно не використовується. `AuthenticationManager.authenticate()` повертає об'єкт `Authentication`, який не зберігається, тому `User` завантажується ще раз, щоб побудувати `UserPrincipal` для генерації токенів.
 
-### 4. JWT token generation
+### 4. Генерація JWT-токенів
 
 ```java
-String accessToken = jwtService.generateAccessToken(new UserPrincipal(user));
-String refreshToken = jwtService.generateRefreshToken(new UserPrincipal(user));
+UserPrincipal principal = new UserPrincipal(user);
+String accessToken = jwtService.generateAccessToken(principal);
+String refreshToken = jwtService.generateRefreshToken(principal);
 ```
 
-Each token is a signed JWT with the following payload:
+Кожен токен — підписаний JWT з таким payload:
 
-```
+```json
 {
   "sub": "user@gmail.com",
-  "type": "access" | "refresh",
-  "iat": <issued at>,
-  "exp": <expiration>
+  "type": "access | refresh",
+  "iat": "<момент видачі>",
+  "exp": "<момент закінчення>"
 }
 ```
 
-Signed with HMAC-SHA using the `JWT_SECRET` key.
+Підписується HMAC-SHA з ключем `JWT_SECRET`.
 
-### 5. Cookies
+### 5. Cookies (`AuthController`)
 
-Two `HttpOnly` cookies are set on the response:
+Після повернення `AuthResult` з `AuthServiceImpl`, саме `AuthController` встановлює два `HttpOnly` cookies через `CookieService`:
 
-- **`accessToken`** — path `/`, expires in 1 hour. Sent automatically with every request to the backend.
-- **`refreshToken`** — path `/auth/refresh`, expires in 7 days. Only sent when the frontend explicitly calls `/auth/refresh`, not on every request.
+- **`accessToken`** — path `/`, живе 1 годину в браузері, сам JWT валідний **15 хвилин**. Надсилається автоматично з кожним запитом до backend.
+- **`refreshToken`** — path `/auth/refresh`, 7 днів. Надсилається лише коли фронтенд явно звертається до `/auth/refresh`, а не з кожним запитом.
 
-`HttpOnly` means JavaScript cannot read these cookies — protection against XSS attacks.
+`HttpOnly` означає, що JavaScript не може прочитати ці cookies — захист від XSS-атак. Обидва cookies також мають `secure(true)` і `sameSite("None")` (`CookieService`), тобто працюють лише через HTTPS і дозволяють cross-site запити з фронтенду на іншому домені.
 
-### 6. How the token protects subsequent requests — `JwtAuthenticationFilter`
+### 6. Як токен захищає подальші запити — `JwtAuthenticationFilter`
 
-After login, every request to a protected endpoint passes through this filter:
+Після логіну кожен запит до захищеного ендпоінту проходить через цей фільтр:
 
 ```java
-String token = extractTokenFromCookies(request); // reads accessToken from cookie
-String email = jwtService.extractUsername(token); // decodes JWT, extracts email
-UserDetails userDetails = userDetailsService.loadUserByUsername(email); // hits the DB
+String token = extractTokenFromCookies(request);              // зчитує accessToken з cookie
+String email = jwtService.extractUsername(token);              // декодує JWT, дістає email
+UserDetails userDetails = userDetailsService.loadUserByUsername(email); // звернення до БД
 if (jwtService.isAccessTokenValid(token, userDetails)) {
-    SecurityContextHolder.getContext().setAuthentication(...); // marks request as authenticated
+    SecurityContextHolder.getContext().setAuthentication(...);  // позначає запит як автентифікований
 }
 ```
 
-On every request: the JWT is decoded, the user is loaded from the database, and the token type (`"access"`) and signature are validated. Only then does Spring Security allow the request through to the protected endpoint.
+На кожному запиті: JWT декодується, користувач завантажується з бази, і перевіряються тип токена (`"access"`) та підпис. Лише після цього Spring Security дозволяє запиту дістатися захищеного ендпоінту. Детальніше — у [JWT](./jwt.md).
 
-## Token Refresh
+## Оновлення токена (Refresh)
 
-When `accessToken` expires, the frontend calls:
+Коли `accessToken` протерміновується, фронтенд викликає:
 
 ```
 POST /auth/refresh
 ```
 
-The `refreshToken` is sent automatically via cookie. The backend validates its type (`"type": "refresh"`), extracts the email, and issues a new `accessToken`.
+`refreshToken` надсилається автоматично через cookie. Backend перевіряє його тип (`"type": "refresh"`), дістає email і видає новий `accessToken`.
 
 ## Logout
 
@@ -180,4 +188,4 @@ The `refreshToken` is sent automatically via cookie. The backend validates its t
 POST /auth/logout
 ```
 
-Both cookies are cleared (MaxAge = 0).
+Обидва cookies очищаються (`Max-Age = 0`), а також очищається `JSESSIONID` (сесія OAuth2, якщо вона була створена).

@@ -1,5 +1,7 @@
 # GitHub Actions — CI
 
+> **Примітка аудиту документації (2026-10-08):** станом на поточний стан репозиторію каталог `.github/workflows/` (і файл `ci.yml`, описаний нижче) **відсутній**. Цей документ описує заплановану CI-конфігурацію, а не те, що фактично виконується в репозиторії зараз. Команди `mvn clean compile`, `mvn test`, `mvn package`, `mvn spotless:check` з прикладу нижче відповідають реальним цілям Maven, визначеним у `pom.xml` (Flyway, Spotless-плагін присутні), але сам workflow-файл GitHub Actions ще не створено.
+
 ## What is CI
 
 **CI (Continuous Integration)** — automatically validates code on every push. Builds the project, runs tests, checks formatting. If something breaks — it's visible immediately before it reaches `main`.

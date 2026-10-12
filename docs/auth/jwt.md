@@ -1,25 +1,25 @@
 # JWT — JSON Web Token
 
-## What is JWT
+## Що таке JWT
 
-JWT (JSON Web Token) is an open standard for securely transmitting information between parties as a compact, self-contained string. The key property: the server does **not** store tokens anywhere. Instead, the token itself carries all the information needed to verify it — the server just checks the signature on every request.
+JWT (JSON Web Token) — відкритий стандарт для безпечної передачі інформації між сторонами у вигляді компактного самодостатнього рядка. Ключова властивість: сервер **не зберігає** токени ніде. Весь необхідний для перевірки вміст закладений у самому токені — сервер лише перевіряє підпис на кожному запиті.
 
 ---
 
-## Token Structure
+## Структура токена
 
-A JWT consists of three parts separated by dots:
+JWT складається з трьох частин, розділених крапками:
 
 ```
 header.payload.signature
 ```
 
-Real example:
+Реальний приклад:
 ```
 eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1c2VyQGdtYWlsLmNvbSIsInR5cGUiOiJhY2Nlc3MiLCJpYXQiOjE3NDU1MDAwMDAsImV4cCI6MTc0NTUwMDkwMH0.abc123...
 ```
 
-Each part is Base64URL encoded — **not encrypted**, just encoded. Anyone can decode the header and payload. The signature is what makes it secure.
+Кожна частина закодована у Base64URL — **не зашифрована**, лише закодована. Будь-хто може декодувати header і payload. Безпеку забезпечує саме підпис.
 
 ```mermaid
 block-beta
@@ -38,7 +38,7 @@ block-beta
 }
 ```
 
-Describes the algorithm used to sign the token. `HS256` = HMAC + SHA-256.
+Описує алгоритм підпису. `HS256` = HMAC + SHA-256.
 
 ### Payload (Claims)
 
@@ -51,12 +51,12 @@ Describes the algorithm used to sign the token. `HS256` = HMAC + SHA-256.
 }
 ```
 
-| Field | Name | Description |
+| Поле | Назва | Опис |
 |---|---|---|
-| `sub` | Subject | Who the token belongs to — in this project: email |
-| `type` | Custom claim | `"access"` or `"refresh"` — distinguishes token types |
-| `iat` | Issued At | Unix timestamp when the token was issued |
-| `exp` | Expiration | Unix timestamp when the token expires |
+| `sub` | Subject | Кому належить токен — у цьому проєкті: email |
+| `type` | Кастомний claim | `"access"` або `"refresh"` — розрізняє типи токенів |
+| `iat` | Issued At | Unix timestamp видачі токена |
+| `exp` | Expiration | Unix timestamp закінчення дії |
 
 ### Signature
 
@@ -67,13 +67,13 @@ HMAC-SHA256(
 )
 ```
 
-The signature is computed using the secret key (`JWT_SECRET`). If anyone tampers with the payload — even changes one character — the signature becomes invalid and the token is rejected.
+Підпис обчислюється за допомогою секретного ключа (`JWT_SECRET`). Якщо хтось підмінить payload — навіть один символ — підпис стане невалідним, і токен буде відхилено.
 
 ---
 
-## How It Works in This Project
+## Як це працює в проєкті
 
-### Token generation — `JwtService`
+### Генерація токена — `JwtService`
 
 ```java
 public String generateAccessToken(UserDetails userDetails) {
@@ -85,120 +85,137 @@ public String generateAccessToken(UserDetails userDetails) {
             .signWith(getSecretKey())
             .compact();
 }
-```
 
-```java
 private SecretKey getSecretKey() {
     return Keys.hmacShaKeyFor(jwtProperties.getSecret().getBytes(StandardCharsets.UTF_8));
 }
 ```
 
-The secret key is loaded from `JWT_SECRET` in `.env` via `JwtProperties` (`@ConfigurationProperties(prefix = "app.jwt")`). The token is signed with HMAC-SHA and returned as a compact string.
+Секретний ключ завантажується зі значення `JWT_SECRET` з `.env` через `JwtProperties` (`@ConfigurationProperties(prefix = "app.jwt")`). Токен підписується HMAC-SHA і повертається як компактний рядок.
 
-### Two token types
+### Два типи токенів
 
 | | `accessToken` | `refreshToken` |
 |---|---|---|
-| `type` claim | `"access"` | `"refresh"` |
-| Expiration | 15 minutes | 7 days |
-| Purpose | Authorizes API requests | Issues new `accessToken` |
-| Cookie path | `/` | `/auth/refresh` |
+| Claim `type` | `"access"` | `"refresh"` |
+| Термін дії токена | 15 хвилин (`app.jwt.access-expiration-ms`) | 7 днів (`app.jwt.refresh-expiration-ms`) |
+| Призначення | Авторизує API-запити | Видає новий `accessToken` |
+| Path cookie | `/` | `/auth/refresh` |
 
-The `type` claim prevents using a `refreshToken` as an `accessToken` and vice versa — validated explicitly in `isAccessTokenValid` and `isRefreshTokenValid`.
+Claim `type` не дозволяє використати `refreshToken` замість `accessToken` і навпаки — це явно перевіряється у `isAccessTokenValid` та `isRefreshTokenValid`.
 
-### Storage — `CookieService`
+### Зберігання — `CookieService`
 
-Tokens are stored in `HttpOnly` cookies, not in `localStorage` or memory:
+Токени зберігаються в `HttpOnly` cookies, а не в `localStorage` чи пам'яті:
 
 ```java
-Cookie cookie = new Cookie("accessToken", token);
-cookie.setHttpOnly(true);   // JavaScript cannot read this cookie — XSS protection
-cookie.setSecure(false);    // true in production (HTTPS only)
-cookie.setPath("/");
-cookie.setMaxAge(60 * 60);  // 1 hour in browser, token itself expires in 15 min
+public void addAccessToken(HttpServletResponse response, String token) {
+    ResponseCookie cookie = ResponseCookie.from("accessToken", token)
+            .httpOnly(true)   // JavaScript не може прочитати цей cookie — захист від XSS
+            .secure(true)     // лише через HTTPS
+            .sameSite("None") // дозволяє cross-site запити з фронтенду на іншому домені
+            .path("/")
+            .maxAge(60 * 60)  // 1 година життя cookie в браузері; сам токен валідний лише 15 хв
+            .build();
+
+    response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+}
 ```
 
-The `refreshToken` has a restricted path:
+`refreshToken` має обмежений path:
 ```java
-cookie.setPath("/auth/refresh");
+.path("/auth/refresh")
 ```
-This means the browser only sends `refreshToken` when calling `/auth/refresh` — it does not travel with every request.
+Це означає, що браузер надсилає `refreshToken` лише при зверненні до `/auth/refresh` — він не подорожує з кожним запитом.
 
-### Validating every request — `JwtAuthenticationFilter`
+> **Важливо:** cookie `accessToken` живе в браузері 1 годину (`maxAge`), але сам JWT-токен валідний лише **15 хвилин** (`exp`-claim). Після 15 хвилин cookie ще існує, але сервер відхилить токен як протермінований (`TokenExpiredException` → 401) — саме тому потрібен `POST /auth/refresh`.
 
-This filter runs on every incoming request, before it reaches any controller:
+### Валідація кожного запиту — `JwtAuthenticationFilter`
+
+Цей фільтр виконується на кожному вхідному запиті, перш ніж він дістанеться контролера:
 
 ```java
-String token = extractTokenFromCookies(request);   // 1. read accessToken cookie
+String token = extractTokenFromCookies(request);   // 1. прочитати accessToken з cookie
 if (token == null) {
-    filterChain.doFilter(request, response);         // no token — pass through (public endpoints)
+    filterChain.doFilter(request, response);         // токена немає — пропустити далі (публічні ендпоінти)
     return;
 }
 
-String email = jwtService.extractUsername(token);   // 2. decode JWT, extract email from "sub"
+try {
+    String email = jwtService.extractUsername(token);   // 2. декодувати JWT, дістати email з "sub"
 
-if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-    UserDetails userDetails = userDetailsService.loadUserByUsername(email); // 3. load user from DB
-    if (jwtService.isAccessTokenValid(token, userDetails)) {                // 4. validate token
-        UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-            userDetails, null, userDetails.getAuthorities()
-        );
-        SecurityContextHolder.getContext().setAuthentication(authToken);    // 5. mark as authenticated
+    if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+        UserDetails userDetails = userDetailsService.loadUserByUsername(email); // 3. завантажити юзера з БД
+        if (jwtService.isAccessTokenValid(token, userDetails)) {                // 4. перевірити токен
+            UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                userDetails, null, userDetails.getAuthorities()
+            );
+            SecurityContextHolder.getContext().setAuthentication(authToken);    // 5. позначити як автентифікованого
+        }
     }
+} catch (InvalidTokenException | TokenExpiredException | JwtException
+         | IllegalArgumentException | AuthenticationException exception) {
+    SecurityContextHolder.clearContext();             // невалідний/протермінований токен — просто не автентифікуємо
 }
-filterChain.doFilter(request, response);             // 6. continue to controller
+filterChain.doFilter(request, response);             // 6. передати далі до контролера
 ```
+
+Якщо токен невалідний або протермінований, фільтр **не кидає виняток назовні** — він просто очищає `SecurityContext` і пропускає запит далі без автентифікації. Остаточне рішення "потрібна авторизація чи ні" ухвалює Spring Security на етапі `authorizeHttpRequests` (`SecurityConfig`): для захищених шляхів неавторизований запит завершується кастомним `authenticationEntryPoint` з відповіддю `401 {"status":401,"message":"Unauthorized","data":null}`.
 
 ```mermaid
 flowchart TD
-    A([Incoming request]) --> B[1. Extract accessToken from cookie]
-    B -->|no cookie| C([Pass through\npublic endpoints])
-    B -->|token found| D[2. Decode JWT → extract email]
-    D --> E[3. Load user from database]
-    E -->|not found| F([401 Unauthorized])
-    E -->|found| G[4. Validate token\nsignature + type=access + not expired]
-    G -->|invalid / expired| H([401 Unauthorized])
-    G -->|valid| I[5. Set SecurityContext\nrequest is authenticated]
-    I --> J([Controller handles request])
+    A([Вхідний запит]) --> B[1. Витягти accessToken з cookie]
+    B -->|немає cookie| C([Пропустити далі\nпублічні ендпоінти])
+    B -->|токен є| D[2. Декодувати JWT → дістати email]
+    D --> E[3. Завантажити юзера з БД]
+    D -->|JwtException / TokenExpired| X([Очистити SecurityContext\nпропустити далі])
+    E -->|не знайдено| X
+    E -->|знайдено| G[4. Перевірити токен\nпідпис + type=access + не протермінований]
+    G -->|невалідний| X
+    G -->|валідний| I[5. Встановити SecurityContext\nзапит автентифікований]
+    I --> J([Контролер обробляє запит])
+    X --> K{Ендпоінт захищений?}
+    K -- Так --> L([401 Unauthorized])
+    K -- Ні --> J
 ```
 
-Step by step:
-1. Extract `accessToken` from cookies
-2. Decode the JWT and get the email from `sub` claim
-3. Load the user from the database (verifies the user still exists)
-4. Check that the token signature is valid and `type` equals `"access"`
-5. Set authentication in `SecurityContext` — Spring Security now knows who is making the request
-6. Pass to the next filter / controller
+Крок за кроком:
+1. Витягти `accessToken` з cookies
+2. Декодувати JWT і отримати email з claim `sub`
+3. Завантажити користувача з бази даних (перевіряє, що він ще існує)
+4. Перевірити валідність підпису токена і що `type` дорівнює `"access"`
+5. Встановити автентифікацію в `SecurityContext` — Spring Security тепер знає, хто робить запит
+6. Передати далі наступному фільтру / контролеру
 
-### Token validation — `isAccessTokenValid`
+### Валідація токена — `isAccessTokenValid`
 
 ```java
 public boolean isAccessTokenValid(String token, UserDetails userDetails) {
-    Claims claims = extractAllClaims(token); // throws TokenExpiredException or InvalidTokenException
+    Claims claims = extractAllClaims(token); // кидає TokenExpiredException або InvalidTokenException
     return userDetails.getUsername().equals(claims.getSubject())
             && "access".equals(claims.get("type", String.class));
 }
 ```
 
-`extractAllClaims` uses the secret key to parse and verify the signature. If the token is expired — `ExpiredJwtException` is caught and rethrown as `TokenExpiredException`. If tampered — `JwtException` → `InvalidTokenException`.
+`extractAllClaims` використовує секретний ключ, щоб розпарсити і перевірити підпис. Якщо токен протермінований — `ExpiredJwtException` перехоплюється і перекидається як `TokenExpiredException`. Якщо токен підроблений — `JwtException` → `InvalidTokenException`.
 
 ---
 
-## Token Refresh Flow
+## Флоу оновлення токена (Refresh)
 
-When `accessToken` expires (after 15 minutes), the frontend calls `POST /auth/refresh`. The `refreshToken` cookie is sent automatically:
+Коли `accessToken` протерміновується (через 15 хвилин), фронтенд викликає `POST /auth/refresh`. Cookie `refreshToken` надсилається автоматично:
 
 ```java
 public String refresh(String refreshToken) {
     if (refreshToken == null) throw new InvalidTokenException();
-    if (!jwtService.isRefreshToken(refreshToken)) throw new WrongTokenTypeException();  // type check
+    if (!jwtService.isRefreshToken(refreshToken)) throw new WrongTokenTypeException();  // перевірка типу
 
     String email = jwtService.extractUsername(refreshToken);
     UserDetails userDetails = userDetailsService.loadUserByUsername(email);
 
     if (!jwtService.isRefreshTokenValid(refreshToken, userDetails)) throw new InvalidTokenException();
 
-    return jwtService.generateAccessToken(userDetails);  // new accessToken, same refreshToken
+    return jwtService.generateAccessToken(userDetails);  // новий accessToken, той самий refreshToken
 }
 ```
 
@@ -207,69 +224,71 @@ sequenceDiagram
     participant Frontend
     participant Backend
 
-    Frontend->>Backend: POST /auth/login (or /register)
-    Backend-->>Frontend: Set-Cookie: accessToken (15 min), refreshToken (7 days)
+    Frontend->>Backend: POST /auth/login (або /auth/register)
+    Backend-->>Frontend: Set-Cookie: accessToken (15 хв), refreshToken (7 днів)
 
-    note over Frontend,Backend: Normal requests (within 15 min)
-    Frontend->>Backend: GET /users/current-user + accessToken cookie
+    note over Frontend,Backend: Звичайні запити (протягом 15 хв)
+    Frontend->>Backend: GET /users/current-user + cookie accessToken
     Backend-->>Frontend: 200 OK
 
-    note over Frontend,Backend: accessToken expires
-    Frontend->>Backend: GET /users/current-user + expired accessToken
+    note over Frontend,Backend: accessToken протермінований
+    Frontend->>Backend: GET /users/current-user + протермінований accessToken
     Backend-->>Frontend: 401 Unauthorized
 
-    Frontend->>Backend: POST /auth/refresh + refreshToken cookie
-    Backend-->>Frontend: Set-Cookie: new accessToken (15 min)
+    Frontend->>Backend: POST /auth/refresh + cookie refreshToken
+    Backend-->>Frontend: Set-Cookie: новий accessToken (15 хв)
 
-    Frontend->>Backend: GET /users/current-user + new accessToken
+    Frontend->>Backend: GET /users/current-user + новий accessToken
     Backend-->>Frontend: 200 OK
 ```
 
-The `refreshToken` is not rotated — the same one is reused until it expires (7 days). In production this is a security consideration worth addressing (see Future Improvements in README).
+`refreshToken` не ротується — той самий токен використовується повторно, поки не протермінується (7 днів). У продакшн-середовищі це варто враховувати як питання безпеки (ротація refresh-токенів наразі не реалізована).
 
 ---
 
 ## Stateless vs Stateful
 
-Traditional session-based auth stores session data on the server and gives the client only a session ID. JWT is stateless — the server stores nothing. Every token is self-contained.
+Традиційна сесійна автентифікація зберігає дані сесії на сервері, а клієнту віддає лише ID сесії. JWT — stateless: сервер нічого не зберігає. Кожен токен самодостатній.
 
-| | Session-based | JWT (this project) |
+| | Сесійна автентифікація | JWT (цей проєкт) |
 |---|---|---|
-| Server stores | Session in DB/memory | Nothing |
-| Token contains | Just an ID | All data + signature |
-| Revocation | Delete session from DB | Not possible without a blocklist |
-| Scaling | Shared session store needed | Works across multiple instances |
+| Сервер зберігає | Сесію в БД/пам'яті | Нічого |
+| Токен містить | Лише ID | Усі дані + підпис |
+| Відкликання (revocation) | Видалити сесію з БД | Неможливе без blocklist |
+| Масштабування | Потрібне спільне сховище сесій | Працює на кількох інстансах без змін |
 
-The tradeoff: because tokens are stateless, they **cannot be revoked** before expiration. If an `accessToken` is compromised, it remains valid for up to 15 minutes. This is why short expiration times matter.
+Компроміс: оскільки токени stateless, їх **неможливо відкликати** до закінчення терміну дії. Якщо `accessToken` скомпрометовано, він залишається валідним до 15 хвилин. Саме тому короткий термін дії важливий.
 
 ---
 
-## Configuration
+## Конфігурація
 
 ```yaml
 app:
   jwt:
-    secret: ${JWT_SECRET}
-    access-expiration-ms: 900000    # 15 min
-    refresh-expiration-ms: 604800000 # 7 days
+    secret: ${JWT_SECRET:3qzqVSvMGFVncul6arlN0Na0F/YcSbmJyvICg43Q2cQ=}
+    access-expiration-ms: 900000     # 15 хв
+    refresh-expiration-ms: 604800000 # 7 днів
 ```
 
-Bound to `JwtProperties` via `@ConfigurationProperties(prefix = "app.jwt")`.
+Прив'язується до `JwtProperties` через `@ConfigurationProperties(prefix = "app.jwt")`.
 
-The secret must be at least 256 bits (32 characters) for HMAC-SHA256. Generate a new one for production:
+Секрет повинен містити щонайменше 256 бітів (32 символи) для HMAC-SHA256. Для продакшну згенеруйте новий:
 
 ```bash
 openssl rand -base64 32
 ```
 
+> У `application.yaml` для `JWT_SECRET` заданий дефолт-значення для локальної розробки — у продакшн-середовищі змінну середовища `JWT_SECRET` слід обов'язково перевизначити власним секретом.
+
 ---
 
-## Components Overview
+## Огляд компонентів
 
-| Class | Role |
+| Клас | Роль |
 |---|---|
-| `JwtService` | Generates and validates tokens |
-| `JwtProperties` | Binds `app.jwt.*` config properties |
-| `JwtAuthenticationFilter` | Intercepts every request, validates `accessToken` |
-| `CookieService` | Sets, reads, and clears `HttpOnly` cookies |
-| `UserPrincipal` | Wraps `User` entity, implements `UserDetails` |
+| `JwtService` | Генерує і валідує токени |
+| `JwtProperties` | Прив'язує конфігураційні властивості `app.jwt.*` |
+| `JwtAuthenticationFilter` | Перехоплює кожен запит, валідує `accessToken` |
+| `CookieService` | Встановлює, читає і очищає `HttpOnly` cookies |
+| `UserPrincipal` | Обгортає сутність `User`, реалізує `UserDetails` |
