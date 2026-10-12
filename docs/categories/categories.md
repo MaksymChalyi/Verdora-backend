@@ -1,58 +1,64 @@
 # Categories
 
-## Overview
+## Огляд
 
-CRUD endpoints for managing product categories.
+CRUD-ендпоінти для управління категоріями товарів.
 
-Read operations are public.
+Операції читання — публічні.
 
-Create, update, and delete operations require authentication and the `ADMIN` role.
+Створення, оновлення і видалення потребують автентифікації та ролі `ADMIN`.
 
 ## Entity
 
 ```java
 Category {
-    id    Long    // auto-generated
-    name  String  // max 256 chars, required
+    id       Long    // auto-generated
+    name     String  // max 256 символів, обов'язкове
+    imageUrl String  // max 2048 символів, обов'язкове
 }
 ```
 
-Database table: `categories`
+Таблиця БД: `categories`
 
 ```sql
 CREATE TABLE categories (
     category_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     name        VARCHAR(256) NOT NULL
 );
+
+-- Додано пізніше міграцією V18
+ALTER TABLE categories ADD COLUMN image_url VARCHAR(2048);
 ```
 
-## Endpoints
+> `imageUrl` передається як готовий URL рядком у тілі запиту (`CategoryRequest`) — окремого ендпоінту завантаження зображення категорії немає. Для завантаження файлу зображення товару використовується `POST /products/upload-image` (Cloudinary), а отриманий URL потім вручну підставляється у `CategoryRequest.imageUrl`.
 
-| Method | Endpoint | Description | Auth |
+## Ендпоінти
+
+| Метод | Ендпоінт | Опис | Авторизація |
 |---|---|---|---|
-| GET | `/categories` | Get all categories | Public |
-| GET | `/categories/{id}` | Get category by ID | Public |
-| POST | `/categories` | Create category | ADMIN |
-| PUT | `/categories/{id}` | Update category | ADMIN |
-| DELETE | `/categories/{id}` | Delete category | ADMIN |
+| GET | `/categories` | Отримати всі категорії (сторінка) | Публічний |
+| GET | `/categories/{id}` | Отримати категорію за ID | Публічний |
+| POST | `/categories` | Створити категорію | ADMIN |
+| PUT | `/categories/{id}` | Оновити категорію | ADMIN |
+| DELETE | `/categories/{id}` | Видалити категорію | ADMIN |
 
 ---
 
-### GET `/categories` - Get all categories
+### GET `/categories` — отримати всі категорії
 
-Returns categories with pagination.
+Повертає категорії зі сторінковою пагінацією.
 
-Default page size: `12`.
+Розмір сторінки за замовчуванням: `12`.
 
-Default sorting: `id`.
+Сортування за замовчуванням: `id`.
 
-Example:
+Приклад:
 
 ```text
 GET /categories?page=0&size=12&sort=id
 ```
 
-Success response `200`
+Успішна відповідь `200`
 
 ```json
 {
@@ -63,7 +69,8 @@ Success response `200`
     "content": [
       {
         "categoryId": 1,
-        "name": "Electronics"
+        "name": "Electronics",
+        "imageUrl": "https://example.com/categories/electronics.jpg"
       }
     ],
     "totalElements": 1,
@@ -76,11 +83,11 @@ Success response `200`
 
 ---
 
-### GET `/categories/{id}` - Get category by ID
+### GET `/categories/{id}` — отримати категорію за ID
 
-Path variable: `id` - category ID
+Path variable: `id` — ID категорії
 
-Success response `200`
+Успішна відповідь `200`
 
 ```json
 {
@@ -89,41 +96,44 @@ Success response `200`
   "message": "Category fetched successfully",
   "data": {
     "categoryId": 1,
-    "name": "Electronics"
+    "name": "Electronics",
+    "imageUrl": "https://example.com/categories/electronics.jpg"
   }
 }
 ```
 
-Error response `404`
+Помилка `404`
 
 ```json
 {
   "timestamp": "2026-04-26T12:00:00Z",
   "status": 404,
-  "message": "Category with id 1 not found",
+  "message": "Category not found, id=1",
   "data": null
 }
 ```
 
 ---
 
-### POST `/categories` - Create category
+### POST `/categories` — створити категорію
 
-Requires authentication with the `ADMIN` role.
+Потребує автентифікації з роллю `ADMIN`.
 
-Request body:
+Тіло запиту:
 
 ```json
 {
-  "name": "Electronics"
+  "name": "Electronics",
+  "imageUrl": "https://example.com/categories/electronics.jpg"
 }
 ```
 
-| Field | Required | Validation |
+| Поле | Обов'язкове | Валідація |
 |---|---|---|
-| `name` | Yes | not blank, max 256 chars |
+| `name` | Так | не порожнє, максимум 256 символів |
+| `imageUrl` | Так | не порожнє, максимум 2048 символів |
 
-Success response `201`
+Успішна відповідь `201`
 
 ```json
 {
@@ -132,28 +142,21 @@ Success response `201`
   "message": "Category created",
   "data": {
     "categoryId": 1,
-    "name": "Electronics"
+    "name": "Electronics",
+    "imageUrl": "https://example.com/categories/electronics.jpg"
   }
 }
 ```
 
-Error response `400`
+Помилка `400` — провалилась валідація запиту (наприклад, `name` або `imageUrl` порожні чи надто довгі).
 
-Returned when request validation fails, for example when `name` is blank or longer than 256 characters.
+Помилка `401` — відсутня автентифікація.
 
-Error response `401`
+Помилка `403` — автентифікований користувач не має ролі `ADMIN`.
 
-Returned when authentication is missing.
+Помилка `409` — категорія з такою назвою вже існує.
 
-Error response `403`
-
-Returned when the authenticated user does not have the `ADMIN` role.
-
-Error response `409`
-
-Returned when a category with the same name already exists.
-
-Example:
+Приклад:
 
 ```json
 {
@@ -164,29 +167,31 @@ Example:
 }
 ```
 
-Category name duplicate checks are case-insensitive.
+Перевірка дублікатів назви — **регістронезалежна**.
 
 ---
 
-### PUT `/categories/{id}` - Update category
+### PUT `/categories/{id}` — оновити категорію
 
-Requires authentication with the `ADMIN` role.
+Потребує автентифікації з роллю `ADMIN`.
 
-Path variable: `id` - category ID
+Path variable: `id` — ID категорії
 
-Request body:
+Тіло запиту:
 
 ```json
 {
-  "name": "Home Appliances"
+  "name": "Home Appliances",
+  "imageUrl": "https://example.com/categories/home-appliances.jpg"
 }
 ```
 
-| Field | Required | Validation |
+| Поле | Обов'язкове | Валідація |
 |---|---|---|
-| `name` | Yes | not blank, max 256 chars |
+| `name` | Так | не порожнє, максимум 256 символів |
+| `imageUrl` | Так | не порожнє, максимум 2048 символів |
 
-Success response `200`
+Успішна відповідь `200`
 
 ```json
 {
@@ -195,51 +200,44 @@ Success response `200`
   "message": "Category updated",
   "data": {
     "categoryId": 1,
-    "name": "Home Appliances"
+    "name": "Home Appliances",
+    "imageUrl": "https://example.com/categories/home-appliances.jpg"
   }
 }
 ```
 
-Error response `400`
+Помилка `400` — провалилась валідація запиту.
 
-Returned when request validation fails.
+Помилка `401` — відсутня автентифікація.
 
-Error response `401`
+Помилка `403` — автентифікований користувач не має ролі `ADMIN`.
 
-Returned when authentication is missing.
-
-Error response `403`
-
-Returned when the authenticated user does not have the `ADMIN` role.
-
-Error response `404`
+Помилка `404`
 
 ```json
 {
   "timestamp": "2026-04-26T12:00:00Z",
   "status": 404,
-  "message": "Category with id 1 not found",
+  "message": "Category not found, id=1",
   "data": null
 }
 ```
 
-Error response `409`
+Помилка `409` — інша категорія з такою назвою вже існує.
 
-Returned when another category with the same name already exists.
+Перевірка дублікатів назви — регістронезалежна.
 
-Category name duplicate checks are case-insensitive.
-
-Updating a category without changing its name is allowed.
+Оновлення категорії без зміни назви дозволене.
 
 ---
 
-### DELETE `/categories/{id}` - Delete category
+### DELETE `/categories/{id}` — видалити категорію
 
-Requires authentication with the `ADMIN` role.
+Потребує автентифікації з роллю `ADMIN`.
 
-Path variable: `id` - category ID
+Path variable: `id` — ID категорії
 
-Success response `200`
+Успішна відповідь `200`
 
 ```json
 {
@@ -250,37 +248,44 @@ Success response `200`
 }
 ```
 
-Error response `401`
+Помилка `401` — відсутня автентифікація.
 
-Returned when authentication is missing.
+Помилка `403` — автентифікований користувач не має ролі `ADMIN`.
 
-Error response `403`
-
-Returned when the authenticated user does not have the `ADMIN` role.
-
-Error response `404`
+Помилка `404`
 
 ```json
 {
   "timestamp": "2026-04-26T12:00:00Z",
   "status": 404,
-  "message": "Category with id 1 not found",
+  "message": "Category not found, id=1",
+  "data": null
+}
+```
+
+Помилка `409` — категорія використовується існуючими товарами і не може бути видалена:
+
+```json
+{
+  "timestamp": "2026-04-26T12:00:00Z",
+  "status": 409,
+  "message": "Category cannot be deleted because it is currently in use, id=1",
   "data": null
 }
 ```
 
 ---
 
-## Authorization
+## Авторизація
 
-Public endpoints:
+Публічні ендпоінти:
 
 ```text
 GET /categories
 GET /categories/{id}
 ```
 
-ADMIN-only endpoints:
+Ендпоінти лише для ADMIN:
 
 ```text
 POST /categories
@@ -288,21 +293,21 @@ PUT /categories/{id}
 DELETE /categories/{id}
 ```
 
-Method-level authorization is enforced with:
+Авторизація на рівні методу забезпечується через:
 
 ```java
 @PreAuthorize("hasRole('ADMIN')")
 ```
 
-Method security is enabled through:
+Method security увімкнено через:
 
 ```java
 @EnableMethodSecurity
 ```
 
-Protected endpoints use cookie-based authentication.
+Захищені ендпоінти використовують cookie-based автентифікацію.
 
-`@SecurityRequirement(name = "Cookie-based Authentication")` documents authentication requirements in OpenAPI. Access control itself is enforced by Spring Security and `@PreAuthorize`.
+`@SecurityRequirement(name = "Cookie-based Authentication")` документує вимоги до автентифікації в OpenAPI. Сам контроль доступу забезпечується Spring Security та `@PreAuthorize`.
 
 ---
 
@@ -316,7 +321,7 @@ sequenceDiagram
     participant CategoryRepository
     participant CategoryMapper
 
-    Client->>CategoryController: POST /categories { name }
+    Client->>CategoryController: POST /categories { name, imageUrl }
     CategoryController->>CategoryServiceImpl: createCategory(request)
     CategoryServiceImpl->>CategoryMapper: toEntity(request)
     CategoryMapper-->>CategoryServiceImpl: Category entity
@@ -325,14 +330,14 @@ sequenceDiagram
     CategoryServiceImpl->>CategoryMapper: toResponse(saved)
     CategoryMapper-->>CategoryServiceImpl: CategoryResponse
     CategoryServiceImpl-->>CategoryController: CategoryResponse
-    CategoryController-->>Client: 201 { categoryId, name }
+    CategoryController-->>Client: 201 { categoryId, name, imageUrl }
 ```
 
-## Key Components
+## Ключові компоненти
 
 ### `CategoryMapper`
 
-MapStruct mapper that converts between `CategoryRequest`, `Category`, and `CategoryResponse`.
+MapStruct-мапер, що конвертує між `CategoryRequest`, `Category` та `CategoryResponse`.
 
 ```text
 CategoryRequest -> Category -> CategoryResponse
@@ -340,7 +345,7 @@ CategoryRequest -> Category -> CategoryResponse
 
 ### `CategoryServiceImpl#getByIdOrThrow`
 
-Reusable private method for operations that require an existing category.
+Приватний метод, що повторно використовується в операціях, які потребують існуючої категорії.
 
 ```java
 private Category getByIdOrThrow(Long id) {
@@ -349,6 +354,6 @@ private Category getByIdOrThrow(Long id) {
 }
 ```
 
-If the category is not found, `CategoryNotFoundException` is thrown.
+Якщо категорію не знайдено — кидається `CategoryNotFoundException`.
 
-`GlobalExceptionHandler` handles the exception and returns HTTP `404`.
+`GlobalExceptionHandler` обробляє цей виняток і повертає HTTP `404`.

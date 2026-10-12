@@ -1,27 +1,27 @@
 # Password Reset Flow
 
-This document describes how the forgot password and reset password features work in the Verdora backend.
+Цей документ описує, як у Verdora backend працюють функції "forgot password" та "reset password".
 
 ---
 
-## Overview
+## Огляд
 
-The password reset flow consists of two steps:
+Процес відновлення пароля складається з двох кроків:
 
-1. **Forgot Password** — the user requests a password reset link via email
-2. **Reset Password** — the user submits a new password using the token from the email
+1. **Forgot Password** — користувач запитує лист зі лінком для відновлення пароля
+2. **Reset Password** — користувач вводить новий пароль, використовуючи токен з листа
 
 ---
 
 ## Forgot Password
 
-### Endpoint
+### Ендпоінт
 
 ```
 POST /auth/forgot-password
 ```
 
-### Request Body
+### Тіло запиту
 
 ```json
 {
@@ -29,17 +29,17 @@ POST /auth/forgot-password
 }
 ```
 
-### HTTP Responses
+### HTTP-відповіді
 
-| Status | Description |
+| Статус | Опис |
 |--------|-------------|
-| 200 OK | Reset email sent successfully |
-| 404 Not Found | User with this email does not exist |
+| 200 OK | Лист для відновлення успішно надіслано |
+| 404 Not Found | Користувача з таким email не існує |
 
-### Flow Diagram
+### Діаграма флоу
 
 ```
-Client                        Backend                        Database                    Gmail SMTP
+Client                        Backend                        Database                    SendGrid API
   │                               │                               │                           │
   │  POST /auth/forgot-password   │                               │                           │
   │  { email }                    │                               │                           │
@@ -50,44 +50,46 @@ Client                        Backend                        Database           
   │                               │<──────────────────────────────│                           │
   │                               │                               │                           │
   │                               │  deleteAllByUserId()          │                           │
-  │                               │  (invalidate old tokens)      │                           │
+  │                               │  (анулювати старі токени)     │                           │
   │                               │──────────────────────────────>│                           │
   │                               │                               │                           │
-  │                               │  Generate UUID token          │                           │
-  │                               │  Set expiresAt = now + 15min  │                           │
+  │                               │  Згенерувати UUID-токен        │                           │
+  │                               │  expiresAt = now + 15 хв      │                           │
   │                               │                               │                           │
   │                               │  save(PasswordResetToken)     │                           │
   │                               │──────────────────────────────>│                           │
   │                               │                               │                           │
-  │                               │  sendPasswordResetEmail()     │                           │
+  │                               │  POST mail/send (SendGrid)    │                           │
   │                               │──────────────────────────────────────────────────────────>│
   │                               │                               │                           │
   │  200 OK                       │                               │                           │
   │<──────────────────────────────│                               │                           │
 ```
 
-### What Happens Internally
+### Що відбувається всередині
 
-1. Backend looks up the user by email — throws `UserNotFoundException` (404) if not found
-2. All previous reset tokens for this user are deleted from the database
-3. A new UUID token is generated and saved with a 15-minute expiry
-4. An email is sent to the user containing a reset link:
+1. Backend шукає користувача за email — якщо не знайдено, кидається `UserNotFoundException` (404)
+2. Усі попередні reset-токени цього користувача видаляються з бази (`passwordResetTokenRepository.deleteAllByUserId`)
+3. Генерується новий UUID-токен (`UUID.randomUUID()`) і зберігається з терміном дії 15 хвилин
+4. На email користувача відправляється лист з лінком для відновлення:
 
 ```
-https://<frontend-url>/reset-password?token=<uuid>
+<app.frontend-url>/reset-password?token=<uuid>
 ```
+
+Лист надсилається через **SendGrid API** (`EmailServiceImpl`, бібліотека `com.sendgrid:sendgrid-java`), а не через SMTP. Ключ API береться з `app.sendgrid-api-key` (`SENDGRID_API_KEY` у `.env`), адреса відправника — з `app.mail-from` (`MAIL_FROM`).
 
 ---
 
 ## Reset Password
 
-### Endpoint
+### Ендпоінт
 
 ```
 POST /auth/reset-password
 ```
 
-### Request Body
+### Тіло запиту
 
 ```json
 {
@@ -96,16 +98,16 @@ POST /auth/reset-password
 }
 ```
 
-### HTTP Responses
+### HTTP-відповіді
 
-| Status | Description |
+| Статус | Опис |
 |--------|-------------|
-| 200 OK | Password reset successfully |
-| 400 Bad Request | Token is invalid |
-| 400 Bad Request | Token has already been used |
-| 400 Bad Request | Token has expired (older than 15 minutes) |
+| 200 OK | Пароль успішно змінено |
+| 400 Bad Request | Токен невалідний (`Invalid reset token`) |
+| 400 Bad Request | Токен вже використано (`Reset token already used`) |
+| 400 Bad Request | Токен протермінований (`Reset token expired`) |
 
-### Flow Diagram
+### Діаграма флоу
 
 ```
 Client                        Backend                        Database
@@ -118,11 +120,11 @@ Client                        Backend                        Database
   │                               │  Token found                  │
   │                               │<──────────────────────────────│
   │                               │                               │
-  │                               │  Check: token.isUsed()?       │
-  │                               │  → yes: throw 400             │
+  │                               │  Перевірка: token.isUsed()?   │
+  │                               │  → так: кинути 400            │
   │                               │                               │
-  │                               │  Check: token.expiresAt       │
-  │                               │  < now? → yes: throw 400      │
+  │                               │  Перевірка: expiresAt         │
+  │                               │  < now? → так: кинути 400     │
   │                               │                               │
   │                               │  BCrypt encode newPassword    │
   │                               │  user.setPasswordHash(...)    │
@@ -137,60 +139,62 @@ Client                        Backend                        Database
   │<──────────────────────────────│                               │
 ```
 
-### What Happens Internally
+### Що відбувається всередині
 
-1. Backend looks up the token in `password_reset_tokens` table
-2. If token is not found → `InvalidResetTokenException` (400)
-3. If token is already used → `ResetTokenAlreadyUsedException` (400)
-4. If token is expired (older than 15 minutes) → `ResetTokenExpiredException` (400)
-5. New password is encoded with BCrypt and saved to the user
-6. Token is marked as `used = true` so it cannot be reused
+1. Backend шукає токен у таблиці `password_reset_tokens` (`findByToken`)
+2. Якщо токен не знайдено → `InvalidResetTokenException` (400, `"Invalid reset token"`)
+3. Якщо токен вже використано → `ResetTokenAlreadyUsedException` (400, `"Reset token already used"`)
+4. Якщо токен протермінований (старший за 15 хвилин) → `ResetTokenExpiredException` (400, `"Reset token expired"`)
+5. Новий пароль кодується BCrypt і зберігається у користувача
+6. Токен позначається як `used = true`, щоб його неможливо було використати повторно
 
 ---
 
-## Database Table
+## Таблиця БД
 
 ```sql
-CREATE TABLE password_reset_tokens (
+CREATE TABLE password_reset_tokens
+(
     id         BIGSERIAL PRIMARY KEY,
     token      VARCHAR(255) NOT NULL UNIQUE,
-    user_id    BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    expires_at TIMESTAMP NOT NULL,
-    used       BOOLEAN NOT NULL DEFAULT FALSE,
-    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+    user_id    BIGINT       NOT NULL REFERENCES users (user_id) ON DELETE CASCADE,
+    expires_at TIMESTAMP    NOT NULL,
+    used       BOOLEAN      NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMP    NOT NULL DEFAULT NOW()
 );
 ```
 
+(Міграція `V10__create_password_reset_tokens_table.sql`.)
+
 ---
 
-## Configuration
+## Конфігурація
 
-The reset link sent in the email uses the `app.frontend-url` property from `application.yaml`:
+Лінк для відновлення, що надсилається листом, формується з властивості `app.frontend-url` у `application.yaml`:
 
 ```yaml
 app:
   frontend-url: ${FRONTEND_URL:http://localhost:5173}
 ```
 
-| Environment | Value |
+| Середовище | Значення |
 |-------------|-------|
-| Local | `http://localhost:5173` |
-| Production | `https://irfi4.github.io/Front-end-Verdora` |
+| Локальне | `http://localhost:5173` |
+| Продакшн | URL фронтенду, заданий через `FRONTEND_URL` |
 
-Email is sent via Gmail SMTP using credentials stored in environment variables:
+Email надсилається через **SendGrid API**, облікові дані — у змінних середовища:
 
 ```
-GMAIL_USERNAME=your@gmail.com
-GMAIL_PASSWORD=your-app-password
-MAIL_FROM=your@gmail.com
+MAIL_FROM=your@email.com
+SENDGRID_API_KEY=your-sendgrid-api-key
 ```
 
 ---
 
-## Security Considerations
+## Міркування щодо безпеки
 
-- Tokens expire after **15 minutes**
-- Each new forgot-password request **invalidates all previous tokens** for that user
-- Tokens are **single-use** — marked as `used = true` after successful reset
-- Passwords are hashed with **BCrypt** before storage
-- Token is a **random UUID** — not guessable
+- Токени протерміновуються через **15 хвилин**
+- Кожен новий запит forgot-password **анулює всі попередні токени** цього користувача
+- Токени — **одноразові**: позначаються `used = true` після успішного відновлення
+- Паролі хешуються через **BCrypt** перед збереженням
+- Токен — **випадковий UUID**, непередбачуваний

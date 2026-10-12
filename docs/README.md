@@ -1,44 +1,44 @@
 # Verdora Backend
 
-Backend service for the Verdora e-commerce platform, built with Spring Boot. Handles authentication (email/password and Google OAuth2), user management, product catalog, shopping cart, orders, and favorites.
+Backend-сервіс для e-commerce платформи Verdora, побудований на Spring Boot. Відповідає за автентифікацію (email/пароль та Google OAuth2), керування користувачами, каталог товарів, кошик, замовлення, вибране та адмінські звіти.
 
 ---
 
-## Tech Stack
+## Технологічний стек
 
-| Technology | Purpose |
+| Технологія | Призначення |
 |---|---|
-| Java 21 | Language |
-| Spring Boot 3 | Framework |
-| Spring Security | Authentication & authorization |
-| Spring Data JPA | Database access |
-| PostgreSQL | Database |
-| Flyway | Database migrations |
-| MapStruct | DTO mapping |
-| springdoc (Swagger) | API documentation |
-| Lombok | Boilerplate reduction |
-| Docker | Containerization |
-| GitHub Actions | CI/CD |
+| Java 21 | Мова програмування |
+| Spring Boot 3.3 | Фреймворк |
+| Spring Security | Автентифікація та авторизація |
+| Spring Data JPA | Доступ до бази даних |
+| PostgreSQL | База даних |
+| Flyway | Міграції бази даних |
+| MapStruct | Мапінг DTO |
+| springdoc (Swagger) | Документація API |
+| Lombok | Скорочення boilerplate-коду |
+| Cloudinary | Зберігання зображень товарів |
+| SendGrid | Відправка email (відновлення пароля) |
 
 ---
 
-## Getting Started
+## Початок роботи
 
-### Prerequisites
+### Передумови
 
 - Java 21
 - Maven
 - PostgreSQL
 
-### 1. Create the database
+### 1. Створення бази даних
 
 ```sql
 CREATE DATABASE verdora_db;
 ```
 
-### 2. Configure environment
+### 2. Налаштування середовища
 
-Copy `.env.example` to `.env` and fill in your values:
+Скопіюйте `.env.example` у `.env` і заповніть власними значеннями:
 
 ```bash
 cp .env.example .env
@@ -63,21 +63,25 @@ ALLOWED_ORIGIN_2=http://localhost:8081
 
 MAIL_FROM=your_email
 SENDGRID_API_KEY=your_sendgrid_key
+
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_cloudinary_key
+CLOUDINARY_API_SECRET=your_cloudinary_secret
 ```
 
-### 3. Run
+### 3. Запуск
 
 ```bash
 ./mvnw spring-boot:run
 ```
 
-### 4. Verify
+### 4. Перевірка
 
 ```
 GET /health/ping
 ```
 
-Expected response:
+Очікувана відповідь:
 ```json
 {
   "status": 200,
@@ -96,9 +100,9 @@ Expected response:
 http://localhost:8081
 ```
 
-### Response format
+### Формат відповіді
 
-All endpoints return a unified wrapper:
+Усі ендпоінти повертають уніфіковану обгортку (`BaseResponse`):
 
 ```json
 {
@@ -109,7 +113,7 @@ All endpoints return a unified wrapper:
 }
 ```
 
-On error:
+У разі помилки:
 
 ```json
 {
@@ -120,136 +124,157 @@ On error:
 }
 ```
 
-### Endpoints
+### Ендпоінти
 
 #### Auth
 
-| Method | Endpoint | Auth | Description |
+| Метод | Ендпоінт | Авторизація | Опис |
 |---|---|---|---|
-| POST | `/auth/sign-up` | ❌ | Register a new user |
-| POST | `/auth/sign-in` | ❌ | Login with email and password |
-| POST | `/auth/refresh` | ❌ (cookie) | Refresh access token |
-| POST | `/auth/logout` | ✅ | Clear auth cookies |
-| POST | `/auth/forgot-password` | ❌ | Send password reset email |
-| POST | `/auth/reset-password` | ❌ | Reset password with token |
-| GET | `/oauth2/authorization/google` | ❌ | Google OAuth2 login |
+| POST | `/auth/register` | ❌ | Реєстрація нового користувача |
+| POST | `/auth/login` | ❌ | Логін за email і паролем |
+| POST | `/auth/refresh` | ❌ (cookie `refreshToken`) | Оновити `accessToken` |
+| POST | `/auth/logout` | ❌ (очищає cookies, якщо вони є) | Вийти, очистити auth-cookies |
+| POST | `/auth/forgot-password` | ❌ | Надіслати лист для відновлення пароля |
+| POST | `/auth/reset-password` | ❌ | Встановити новий пароль за токеном |
+| GET | `/oauth2/authorization/google` | ❌ | Початок Google OAuth2 логіну |
 
 #### Users
 
-| Method | Endpoint | Auth | Description |
+| Метод | Ендпоінт | Авторизація | Опис |
 |---|---|---|---|
-| GET | `/users/me` | ✅ | Get current user |
-| PUT | `/users/me` | ✅ | Update current user |
-| GET | `/users` | ✅ ADMIN | Get all users (paginated) |
-| DELETE | `/users/{id}` | ✅ ADMIN | Delete user |
+| GET | `/users/current-user` | ✅ | Профіль поточного користувача |
+| PUT | `/users/current-user` | ✅ | Оновити ім'я/телефон поточного користувача |
+| DELETE | `/users/current-user` | ✅ (+ пароль у тілі) | Видалити власний акаунт |
+| GET | `/users` | ✅ ADMIN | Сторінка всіх користувачів |
 
 #### Products
 
-| Method | Endpoint | Auth | Description |
+| Метод | Ендпоінт | Авторизація | Опис |
 |---|---|---|---|
-| GET | `/products` | ❌ | Get products (with filters) |
-| GET | `/products/{id}` | ❌ | Get product by ID |
-| POST | `/products` | ✅ ADMIN | Create product |
-| PUT | `/products/{id}` | ✅ ADMIN | Update product |
-| DELETE | `/products/{id}` | ✅ ADMIN | Delete product |
+| GET | `/products` | ❌ | Сторінка товарів з фільтрами/пошуком; якщо користувач авторизований — враховує `isFavorite` |
+| GET | `/products/{id}` | ❌ | Товар за ID (з `isFavorite` для авторизованого користувача) |
+| GET | `/products/product-of-the-day` | ❌ | Товар з найбільшим відсотком знижки (200 з `data: null`, якщо знижених товарів немає) |
+| POST | `/products` | ✅ ADMIN | Створити товар |
+| PUT | `/products/{id}` | ✅ ADMIN | Оновити товар |
+| DELETE | `/products/{id}` | ✅ ADMIN | Видалити товар |
+| POST | `/products/upload-image` | ✅ ADMIN | Завантажити зображення товару (Cloudinary, multipart, до 5 MB) |
 
-**Filter params for `GET /products`:**
+**Параметри фільтрації `GET /products`:**
 
-| Param | Type | Description |
+| Параметр | Тип | Опис |
 |---|---|---|
-| `categoryId` | Long | Filter by category |
-| `minPrice` | BigDecimal | Minimum price |
-| `maxPrice` | BigDecimal | Maximum price |
-| `discount` | Boolean | Only discounted products |
-| `page`, `size`, `sort` | — | Pagination |
+| `categoryId` | Long | Фільтр за категорією |
+| `minPrice` | BigDecimal | Мінімальна ціна |
+| `maxPrice` | BigDecimal | Максимальна ціна |
+| `discount` | Boolean | Лише товари зі знижкою (`discountPrice < price`) |
+| `search` | String | Пошук за назвою (регістронезалежний) |
+| `page`, `size`, `sort` | — | Пагінація, default `size=12`, сортування `id` |
 
 #### Categories
 
-| Method | Endpoint | Auth | Description |
+| Метод | Ендпоінт | Авторизація | Опис |
 |---|---|---|---|
-| GET | `/categories` | ❌ | Get all categories |
-| POST | `/categories` | ✅ ADMIN | Create category |
-| PUT | `/categories/{id}` | ✅ ADMIN | Update category |
-| DELETE | `/categories/{id}` | ✅ ADMIN | Delete category |
+| GET | `/categories` | ❌ | Сторінка категорій |
+| GET | `/categories/{id}` | ❌ | Категорія за ID |
+| POST | `/categories` | ✅ ADMIN | Створити категорію |
+| PUT | `/categories/{id}` | ✅ ADMIN | Оновити категорію |
+| DELETE | `/categories/{id}` | ✅ ADMIN | Видалити категорію |
 
 #### Cart
 
-| Method | Endpoint | Auth | Description |
+| Метод | Ендпоінт | Авторизація | Опис |
 |---|---|---|---|
-| GET | `/cart` | ✅ | Get current user's cart |
-| POST | `/cart/items` | ✅ | Add item to cart |
-| PUT | `/cart/items/{cartItemId}` | ✅ | Update item quantity |
-| DELETE | `/cart/items/{cartItemId}` | ✅ | Remove item from cart |
-| DELETE | `/cart` | ✅ | Clear cart |
+| GET | `/cart` | ✅ | Кошик поточного користувача (створюється автоматично) |
+| POST | `/cart/items` | ✅ | Додати товар у кошик |
+| PUT | `/cart/items/{cartItemId}` | ✅ | Змінити кількість товару |
+| DELETE | `/cart/items/{cartItemId}` | ✅ | Видалити товар з кошика |
+| DELETE | `/cart` | ✅ | Очистити кошик |
 
 #### Orders
 
-| Method | Endpoint | Auth | Description |
+| Метод | Ендпоінт | Авторизація | Опис |
 |---|---|---|---|
-| POST | `/orders` | ✅ | Place order from cart |
-| GET | `/orders` | ✅ | Get all user's orders |
-| GET | `/orders/{orderId}` | ✅ | Get order by ID |
-| DELETE | `/orders/{orderId}` | ✅ | Cancel order (PENDING only) |
-| PATCH | `/orders/{orderId}/status` | ✅ ADMIN | Update order status |
+| POST | `/orders` | ✅ | Оформити замовлення з кошика |
+| GET | `/orders` | ✅ | Сторінка власних замовлень |
+| GET | `/orders/{orderId}` | ✅ | Деталі свого замовлення |
+| GET | `/orders/{orderId}/status` | ✅ | Легкий статус замовлення (для polling) |
+| DELETE | `/orders/{orderId}` | ✅ | Скасувати своє замовлення (`PENDING`/`PAID`) |
+| GET | `/orders/all` | ✅ ADMIN | Сторінка всіх замовлень з фільтрами (`status`, `dateFrom`, `dateTo`) |
+| GET | `/orders/{orderId}/details` | ✅ ADMIN | Повні деталі будь-якого замовлення |
+| PATCH | `/orders/{orderId}/status` | ✅ ADMIN | Змінити статус замовлення |
 
-**Order statuses:** `PENDING` → `PAID` → `SHIPPED` → `CANCELLED`
+**Статуси замовлення:** `PENDING` → `PAID` → `SHIPPED` → `DELIVERED`, з `PENDING`/`PAID` можливий перехід у `CANCELLED`. `DELIVERED` і `CANCELLED` — фінальні.
 
 #### Favorites
 
-| Method | Endpoint | Auth | Description |
+| Метод | Ендпоінт | Авторизація | Опис |
 |---|---|---|---|
-| GET | `/favorites` | ✅ | Get favorite products |
-| POST | `/favorites/{productId}` | ✅ | Add to favorites |
-| DELETE | `/favorites/{productId}` | ✅ | Remove from favorites |
+| GET | `/favorites` | ✅ | Сторінка вибраних товарів |
+| GET | `/favorites/{productId}` | ✅ | Чи товар у вибраному (`true`/`false`) |
+| POST | `/favorites/{productId}` | ✅ | Додати товар у вибране |
+| DELETE | `/favorites/{productId}` | ✅ | Видалити товар з вибраного |
+
+#### Reports (ADMIN)
+
+| Метод | Ендпоінт | Авторизація | Опис |
+|---|---|---|---|
+| GET | `/reports/top-purchased` | ✅ ADMIN | До 10 товарів з найбільшою купленою кількістю |
+| GET | `/reports/top-cancelled` | ✅ ADMIN | До 10 товарів з найбільшою скасованою кількістю |
+| GET | `/reports/pending-payment?n={days}` | ✅ ADMIN | Замовлення в `PENDING` довше за `n` днів |
+| GET | `/reports/revenue?dateFrom=&dateTo=&groupBy=` | ✅ ADMIN | Виручка, згрупована по `HOUR`, `DAY`, `WEEK` або `MONTH` |
 
 #### Health
 
-| Method | Endpoint | Auth | Description |
+| Метод | Ендпоінт | Авторизація | Опис |
 |---|---|---|---|
-| GET | `/health/ping` | ❌ | Service availability check |
+| GET | `/health/ping` | ❌ | Перевірка доступності сервісу |
 
 ---
 
-## Authentication
+## Автентифікація
 
-Cookie-based authentication using JWT. After login or registration two `HttpOnly` cookies are set:
+Cookie-based автентифікація на основі JWT. Після логіну чи реєстрації встановлюються два `HttpOnly` cookies:
 
-| Cookie | Path | Expiration |
+| Cookie | Path | Max-Age cookie / термін дії токена |
 |---|---|---|
-| `accessToken` | `/` | 15 minutes |
-| `refreshToken` | `/auth/refresh` | 7 days |
+| `accessToken` | `/` | Cookie живе 1 годину в браузері, але сам JWT-токен валідний лише **15 хвилин** (`app.jwt.access-expiration-ms`) |
+| `refreshToken` | `/auth/refresh` | 7 днів (і cookie, і токен) |
 
-Cookies are sent automatically by the browser on every request. `HttpOnly` prevents JavaScript from reading them (XSS protection).
+Обидва cookies — `HttpOnly`, `Secure`, `SameSite=None` (`CookieService`). Браузер надсилає їх автоматично на кожен запит у межах їхнього `path`.
 
-When `accessToken` expires — call `POST /auth/refresh`. The `refreshToken` cookie is sent automatically and a new `accessToken` is issued.
+Коли `accessToken` протермінований — викликається `POST /auth/refresh`. `refreshToken` надсилається автоматично (cookie з path `/auth/refresh`), і видається новий `accessToken`.
+
+Детальніше — у [JWT](./auth/jwt.md).
 
 ---
 
-## Project Structure
+## Структура проєкту
 
 ```
 src/main/java/com/verdorabackend/
-├── controller/       # REST endpoints
-├── service/          # Business logic
+├── controller/       # REST-ендпоінти
+├── service/          # Бізнес-логіка
 │   └── impl/
-├── repository/       # JPA repositories
-├── entity/           # JPA entities
+├── repository/       # JPA-репозиторії
+│   └── specification/
+├── entity/           # JPA-сутності
 ├── dto/
-│   ├── request/      # Incoming payloads
-│   ├── response/     # Outgoing payloads
-│   └── auth/         # Internal auth results
-├── security/         # JWT, OAuth2, filters, cookies
-├── exception/        # Custom exceptions
-│   └── handler/      # GlobalExceptionHandler
-├── mapper/           # MapStruct mappers
-└── config/           # OpenAPI, security beans, app properties
+│   ├── request/      # Вхідні payload'и
+│   ├── response/      # Вихідні payload'и
+│   └── auth/          # Внутрішні результати автентифікації
+├── security/         # JWT, OAuth2, фільтри, cookies
+├── exception/         # Кастомні винятки
+│   └── handler/        # GlobalExceptionHandler
+├── mapper/            # MapStruct-мапери
+├── validation/         # Кастомні @Constraint-валідатори
+└── config/             # OpenAPI, security beans, app properties, Cloudinary
 ```
 
 ---
 
-## Database
+## База даних
 
-Migrations are managed by Flyway and run automatically on startup.
+Міграції керуються Flyway і виконуються автоматично при старті застосунку.
 
 ```
 resources/db/migration/
@@ -262,12 +287,20 @@ resources/db/migration/
 ├── V7__create_order_items_table.sql
 ├── V8__create_favorites_table.sql
 ├── V9__insert_default_admin.sql
-└── V10__create_password_reset_tokens_table.sql
+├── V10__create_password_reset_tokens_table.sql
+├── V13__add_delivered_order_status.sql
+├── V14__update_admin_password.sql
+├── V15__update_admin_password.sql
+├── V16__update_admin_password.sql
+├── V17__update_admin_password.sql
+└── V18__add_image_url_to_categories.sql
 ```
 
-Default admin credentials (from V9 migration):
+> Версій `V11` та `V12` у репозиторії немає — нумерація Flyway-міграцій не є суцільною.
+
+Облікові дані адміна за замовчуванням (з міграції V9, пароль оновлювався міграціями V14–V17):
 - **Email:** `admin@verdora.com`
-- **Password:** `password`
+- **Пароль:** `password`
 
 ---
 
@@ -278,25 +311,23 @@ Default admin credentials (from V9 migration):
 
 ---
 
-## Docker
+## Docker / CI/CD
 
-```bash
-docker-compose up -d
-```
-
-See [Docker docs](./docs/docker/docker.md) for details.
+> **Примітка:** на момент цього аудиту в репозиторії відсутні `Dockerfile`, `docker-compose.yml` та каталог `.github/workflows`. Документи [Docker](./docker/docker.md), [CI](./ci-cd/github-ci.md) та [CD](./ci-cd/github-cd.md) описують цільову/заплановану інфраструктуру розгортання, а не файли, що фактично існують у поточному коді. Якщо ці файли буде додано, документи потребуватимуть повторної перевірки.
 
 ---
 
-## Documentation
+## Документація
 
 - [Sign In](./auth/sign-in.md)
 - [Sign Up](./auth/sign-up.md)
 - [JWT](./auth/jwt.md)
 - [Google OAuth](./auth/google-oauth.md)
 - [Password Reset](./auth/password_reset.md)
+- [Categories](./categories/categories.md)
 - [Cart](./cart/cart.md)
-- [Orders](./orders/orders.md)
+- [Orders](./order/orders.md)
 - [Favorites](./favorites/favorites.md)
 - [Docker](./docker/docker.md)
-- [CI/CD](./ci-cd/github-ci.md)
+- [CI](./ci-cd/github-ci.md)
+- [CD](./ci-cd/github-cd.md)
