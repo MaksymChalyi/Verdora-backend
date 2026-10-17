@@ -23,12 +23,23 @@ class UserControllerIntegrationTest extends BaseIntegrationTest {
         mockMvc.perform(get("/users/current-user")
                         .cookie(userCookie()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.name").exists())
-                .andExpect(jsonPath("$.data.email").exists())
+                .andExpect(jsonPath("$.data.name").value("Ivan Test"))
+                .andExpect(jsonPath("$.data.email").value("ivan@verdora.com"))
+                .andExpect(jsonPath("$.data.role").value("USER"))
                 .andExpect(jsonPath("$.data.id").doesNotExist())
                 .andExpect(jsonPath("$.data.password").doesNotExist())
-                .andExpect(jsonPath("$.data.passwordHash").doesNotExist())
-                .andExpect(jsonPath("$.data.role").doesNotExist());
+                .andExpect(jsonPath("$.data.passwordHash").doesNotExist());
+    }
+
+    @Test
+    void getCurrentUser_asAdmin_returnsAdminRole() throws Exception {
+        mockMvc.perform(get("/users/current-user")
+                        .cookie(adminCookie()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.email").value("admin@verdora.com"))
+                .andExpect(jsonPath("$.data.role").value("ADMIN"))
+                .andExpect(jsonPath("$.data.id").doesNotExist())
+                .andExpect(jsonPath("$.data.passwordHash").doesNotExist());
     }
 
     @Test

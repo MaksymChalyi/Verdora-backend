@@ -7,6 +7,7 @@ import com.verdorabackend.dto.response.BaseResponseFactory;
 import com.verdorabackend.dto.response.ProfileResponse;
 import com.verdorabackend.dto.response.UserResponse;
 import com.verdorabackend.security.CookieService;
+import com.verdorabackend.security.UserPrincipal;
 import com.verdorabackend.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -28,6 +29,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
@@ -63,7 +65,8 @@ public class UserController {
                                       "data": {
                                         "name": "Stepan",
                                         "email": "stepan@gmail.com",
-                                        "phone": "+380989703417"
+                                        "phone": "+380989703417",
+                                        "role": "USER"
                                       }
                                     }
                                     """)
@@ -90,10 +93,12 @@ public class UserController {
     public ResponseEntity<BaseResponse<ProfileResponse>> getCurrentUser(Principal principal) {
         log.info("Request for current user profile");
         UserResponse user = userService.getUserByEmail(principal.getName());
+        UserPrincipal userPrincipal = (UserPrincipal) ((Authentication) principal).getPrincipal();
         ProfileResponse response = new ProfileResponse(
                 user.name(),
                 user.email(),
-                user.phone()
+                user.phone(),
+                userPrincipal.getUser().getRole()
         );
 
         return ResponseEntity.ok(
@@ -136,10 +141,12 @@ public class UserController {
                 request
         );
 
+        UserPrincipal userPrincipal = (UserPrincipal) ((Authentication) principal).getPrincipal();
         ProfileResponse response = new ProfileResponse(
                 user.name(),
                 user.email(),
-                user.phone()
+                user.phone(),
+                userPrincipal.getUser().getRole()
         );
 
         return ResponseEntity.ok(
