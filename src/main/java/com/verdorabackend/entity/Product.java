@@ -1,7 +1,10 @@
 package com.verdorabackend.entity;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.PositiveOrZero;
+import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -59,7 +62,7 @@ public class Product {
     private OffsetDateTime updatedAt;
 
     public BigDecimal getEffectivePrice() {
-        if (discountPrice != null && discountPrice.compareTo(price) < 0) {
+        if (discountPrice != null && discountPrice.signum() > 0 && discountPrice.compareTo(price) < 0) {
             return discountPrice;
         }
 

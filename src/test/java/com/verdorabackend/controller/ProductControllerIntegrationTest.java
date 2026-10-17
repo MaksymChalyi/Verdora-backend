@@ -1,6 +1,9 @@
 package com.verdorabackend.controller;
 
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -142,6 +145,32 @@ class ProductControllerIntegrationTest extends BaseIntegrationTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.name").value("Test Product"))
                 .andExpect(jsonPath("$.data.price").value(999.99));
+    }
+
+
+    @ParameterizedTest
+    @ValueSource(strings = {"price", "categoryId", "discountPrice"})
+    void createProduct_withZeroValues_returns400(String field) throws Exception {
+        String request = """
+                {
+                  "name": "Laptop",
+                  "description": "Gaming laptop",
+                  "price": 500,
+                  "categoryId": 1,
+                  "imageUrl": "https://site.com/image.jpg",
+                  "discountPrice": 300
+                }
+                """;
+
+        ObjectNode json = (ObjectNode) objectMapper.readTree(request);
+        json.put(field, 0);
+
+        mockMvc.perform(post("/products")
+                        .cookie(adminCookie())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(json)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400));
     }
 
     @Test
@@ -702,56 +731,44 @@ class ProductControllerIntegrationTest extends BaseIntegrationTest {
     }
 
     @Test
-    void getProductOfTheDay_equalBestDiscount_returnsStableProduct() throws Exception {
+    void getProductOfTheDay_returnsBestSellingProduct() throws Exception {
+        jdbcTemplate.update("DELETE FROM order_items");
+        jdbcTemplate.update("DELETE FROM orders");
 
-        jdbcTemplate.update("UPDATE products SET discount_price = NULL");
+        jdbcTemplate.update("""
+                INSERT INTO orders (user_id, status, total_price)
+                VALUES (1, 'PAID', 2000.00)
+                """);
 
-        jdbcTemplate.update(
-                """
-                        UPDATE products
-                        SET price = 1000.00,
-                            discount_price = 500.00
-                        WHERE product_id = 1
-                        """
+        Long orderId = jdbcTemplate.queryForObject(
+                "SELECT MAX(order_id) FROM orders",
+                Long.class
         );
 
-        jdbcTemplate.update(
-                """
-                        UPDATE products
-                        SET price = 2000.00,
-                            discount_price = 1000.00
-                        WHERE product_id = 2
-                        """
-        );
+        jdbcTemplate.update("""
+                INSERT INTO order_items (order_id, product_id, quantity, price_at_purchase)
+                VALUES (?, 1, 2, 500.00)
+                """, orderId);
+
+        jdbcTemplate.update("""
+                INSERT INTO order_items (order_id, product_id, quantity, price_at_purchase)
+                VALUES (?, 2, 5, 200.00)
+                """, orderId);
 
         mockMvc.perform(get("/products/product-of-the-day"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.productId")
-                        .value(1))
-                .andExpect(jsonPath("$.data.name")
-                        .exists())
-                .andExpect(jsonPath("$.data.imageUrl")
-                        .exists())
-                .andExpect(jsonPath("$.data.price")
-                        .value(1000.00))
-                .andExpect(jsonPath("$.data.discountPrice")
-                        .value(500.00));
-
-        mockMvc.perform(get("/products/product-of-the-day"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.productId")
-                        .value(1));
+                .andExpect(jsonPath("$.data.productId").value(2));
     }
 
     @Test
-    void getProductOfTheDay_noDiscountedProducts_returns200() throws Exception {
-
-        jdbcTemplate.update("UPDATE products SET discount_price = NULL");
+    void getProductOfTheDay_noSales_returns200WithNullData() throws Exception {
+        jdbcTemplate.update("DELETE FROM order_items");
+        jdbcTemplate.update("DELETE FROM orders");
 
         mockMvc.perform(get("/products/product-of-the-day"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value(200))
-                .andExpect(jsonPath("$.data").doesNotExist());
+                .andExpect(jsonPath("$.data").value(org.hamcrest.Matchers.nullValue()));
     }
 
 }

@@ -4,7 +4,7 @@ import com.verdorabackend.validation.ValidDiscountPrice;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.PositiveOrZero;
+import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 
 import java.math.BigDecimal;
@@ -27,19 +27,22 @@ public record ProductRequest(
 
         @Schema(description = "Product price", example = "500")
         @NotNull(message = "Price is required")
-        @PositiveOrZero
+        @Positive(message = "Price must be greater than zero")
         BigDecimal price,
 
         @Schema(description = "Category ID", example = "1")
         @NotNull(message = "Category is required")
+        @Positive(message = "Category ID must be greater than zero")
         Long categoryId,
 
         @Schema(description = "Product image", example = "https://site.com/image.jpg")
         @NotBlank(message = "Image is required")
         String imageUrl,
 
-        @Schema(description = "Product discount price", example = "300")
-        @PositiveOrZero
+        @Schema(description = "Product discount price",
+                example = "300",
+                nullable = true)
+        @Positive(message = "Discount price must be greater than zero")
         BigDecimal discountPrice
 ) {
 

@@ -77,9 +77,14 @@ public class CartController {
         );
     }
 
-    @Operation(summary = "Add item to cart", description = "Adds a product to the cart. If already present, increases quantity")
+    @Operation(
+            summary = "Add item to cart",
+            description = "Adds a product to the cart. If already present, increases quantity"
+    )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Item added to cart"),
+            @ApiResponse(responseCode = "400", description = "Invalid request body"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "Product not found")
     })
     @PostMapping("/items")

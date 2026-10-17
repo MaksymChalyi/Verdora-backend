@@ -14,9 +14,10 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.support.MissingServletRequestPartException;
-import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -122,15 +123,16 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<BaseResponse<Void>> handleMethodArgumentTypeMismatch(
-            MethodArgumentTypeMismatchException exception
-    ) {
+            MethodArgumentTypeMismatchException exception) {
+        Class<?> requiredType = exception.getRequiredType();
+        String typeName = requiredType != null ? requiredType.getSimpleName() : "value";
+        String message = "Parameter '" + exception.getName()
+                + "' must be a valid " + typeName;
+
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
-                .body(
-                        BaseResponseFactory.error(
-                                HttpStatus.BAD_REQUEST,
-                                "Invalid path parameter"
-                        )
+                .body(BaseResponseFactory.error(
+                        HttpStatus.BAD_REQUEST, message)
                 );
     }
 

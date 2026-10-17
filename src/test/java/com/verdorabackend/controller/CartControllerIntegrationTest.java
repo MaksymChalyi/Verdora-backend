@@ -83,11 +83,11 @@ class CartControllerIntegrationTest extends BaseIntegrationTest {
     @Test
     void addItem_discountedProduct_usesDiscountPrice() throws Exception {
         String body = """
-            {
-              "productId": 1,
-              "quantity": 2
-            }
-            """;
+                {
+                  "productId": 1,
+                  "quantity": 2
+                }
+                """;
 
         mockMvc.perform(post("/cart/items")
                         .cookie(userCookie())
@@ -98,6 +98,44 @@ class CartControllerIntegrationTest extends BaseIntegrationTest {
                 .andExpect(jsonPath("$.data.items[0].subtotal").value(1600.00))
                 .andExpect(jsonPath("$.data.totalPrice").value(1600.00));
     }
+
+
+    @Test
+    void addItem_withMissingFields_returns400() throws Exception {
+        String body = """
+                {
+                    "productId": null,
+                    "quantity": null
+                }
+                """;
+
+        mockMvc.perform(post("/cart/items")
+                        .cookie(userCookie())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400));
+    }
+
+    @Test
+    void addItem_withMalformedJson_returns400() throws Exception {
+        String body = """
+                {
+                    "productId": ,
+                    "quantity":
+                }
+                """;
+
+        mockMvc.perform(post("/cart/items")
+                        .cookie(userCookie())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.message")
+                        .value("Malformed JSON request"));
+    }
+
 
     // ── PUT /cart/items/{id} ──────────────────────────────────────────────────
     @Test
