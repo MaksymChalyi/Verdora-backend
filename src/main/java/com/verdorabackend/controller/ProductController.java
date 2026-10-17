@@ -167,16 +167,16 @@ public class ProductController {
     @Operation(
             summary = "Get product of the day",
             description = """
-                    Returns the product with the highest discount percentage.
-                    If multiple products have the same highest discount,
+                    Returns the most purchased product based on total sold quantity.
+                    Only PAID, SHIPPED and DELIVERED orders are considered.
+                    If multiple products have the same sales quantity,
                     the product with the lowest ID is returned.
-                    If no discounted products exist, the endpoint returns
-                    HTTP 200 with empty data.
+                    If no purchased products exist, returns HTTP 200 with empty data.
                     """
     )
     @ApiResponse(
             responseCode = "200",
-            description = "Product of the day returned successfully or no discounted product available"
+            description = "Best-selling product returned or no purchased product available"
     )
     @GetMapping("/product-of-the-day")
     public ResponseEntity<BaseResponse<ProductResponse>> getProductOfTheDay() {

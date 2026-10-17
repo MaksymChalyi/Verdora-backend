@@ -3,7 +3,9 @@ package com.verdorabackend.service.impl;
 
 import com.verdorabackend.dto.request.ProductRequest;
 import com.verdorabackend.dto.response.ProductResponse;
+import com.verdorabackend.dto.response.TopPurchasedProductResponse;
 import com.verdorabackend.entity.Category;
+import com.verdorabackend.entity.OrderStatus;
 import com.verdorabackend.entity.Product;
 import com.verdorabackend.exception.CategoryNotFoundException;
 import com.verdorabackend.exception.ProductDeletionException;
@@ -11,6 +13,7 @@ import com.verdorabackend.exception.ProductNotFoundException;
 import com.verdorabackend.mapper.ProductMapper;
 import com.verdorabackend.repository.CategoryRepository;
 import com.verdorabackend.repository.FavoriteRepository;
+import com.verdorabackend.repository.OrderItemRepository;
 import com.verdorabackend.repository.ProductRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -22,6 +25,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -29,6 +33,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -49,6 +54,9 @@ class ProductServiceImplTest {
 
     @Mock
     private FavoriteRepository favoriteRepository;
+
+    @Mock
+    private OrderItemRepository orderItemRepository;
 
     @InjectMocks
     private ProductServiceImpl productService;
@@ -306,44 +314,35 @@ class ProductServiceImplTest {
     }
 
     @Test
-    void getProductOfTheDay_highestDiscountPercentage_returnsProduct() {
-        Product first = product(1L, "1000.00", "700.00");
-        Product second = product(2L, "100.00", "50.00");
+    void getProductOfTheDay_returnsBestSellingProduct() {
+        Product product = product(2L, "100.00", "80.00");
+        ProductResponse response = new ProductResponse(2L, "Product", null, new BigDecimal("100.00"), null, null, new BigDecimal("80.00"), null, null, false);
+        TopPurchasedProductResponse bestSeller = new TopPurchasedProductResponse(2L, "Product", 25L);
 
-        ProductResponse response = mock(ProductResponse.class);
+        Set<OrderStatus> statuses = Set.of(
+                OrderStatus.PAID,
+                OrderStatus.SHIPPED,
+                OrderStatus.DELIVERED
+        );
 
-        when(productRepository.findDiscountedProducts()).thenReturn(List.of(first, second));
-
-        when(productMapper.toResponse(second)).thenReturn(response);
-
+        when(orderItemRepository.findTopPurchasedProducts(statuses, PageRequest.of(0, 1))).thenReturn(List.of(bestSeller));
+        when(productRepository.findById(2L)).thenReturn(Optional.of(product));
+        when(productMapper.toResponse(product)).thenReturn(response);
         Optional<ProductResponse> result = productService.getProductOfTheDay();
 
         assertTrue(result.isPresent());
-        assertSame(response, result.orElseThrow());
+        assertEquals(response, result.orElseThrow());
 
-        verify(productMapper).toResponse(second);
+        verify(orderItemRepository).findTopPurchasedProducts(
+                statuses, PageRequest.of(0, 1)
+        );
     }
 
-    @Test
-    void getProductOfTheDay_equalDiscount_usesLowestProductId() {
-        Product higherId = product(2L, "200.00", "160.00");
-        Product lowerId = product(1L, "100.00", "80.00");
-
-        ProductResponse response = mock(ProductResponse.class);
-        when(productRepository.findDiscountedProducts()).thenReturn(List.of(higherId, lowerId));
-        when(productMapper.toResponse(lowerId)).thenReturn(response);
-
-        Optional<ProductResponse> result = productService.getProductOfTheDay();
-
-        assertTrue(result.isPresent());
-        assertSame(response, result.orElseThrow());
-
-        verify(productMapper).toResponse(lowerId);
-    }
 
     @Test
-    void getProductOfTheDay_noDiscountedProducts_returnsEmpty() {
-        when(productRepository.findDiscountedProducts()).thenReturn(List.of());
+    void getProductOfTheDay_noSales_returnsEmpty() {
+        when(orderItemRepository.findTopPurchasedProducts(
+                any(), eq(PageRequest.of(0, 1)))).thenReturn(List.of());
 
         Optional<ProductResponse> result = productService.getProductOfTheDay();
 
