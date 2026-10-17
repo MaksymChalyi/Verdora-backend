@@ -164,19 +164,20 @@ public class ProductController {
         );
     }
 
+
     @Operation(
             summary = "Get product of the day",
             description = """
-                    Returns the most purchased product based on total sold quantity.
-                    Only PAID, SHIPPED and DELIVERED orders are considered.
-                    If multiple products have the same sales quantity,
+                    Returns the best-selling product based on total sold quantity.
+                    Only orders with PAID, SHIPPED or DELIVERED status are considered.
+                    If multiple products have the same quantity sold,
                     the product with the lowest ID is returned.
-                    If no purchased products exist, returns HTTP 200 with empty data.
+                    If no qualifying sales exist, returns HTTP 200 with null data.
                     """
     )
     @ApiResponse(
             responseCode = "200",
-            description = "Best-selling product returned or no purchased product available"
+            description = "Best-selling product returned or no sales available"
     )
     @GetMapping("/product-of-the-day")
     public ResponseEntity<BaseResponse<ProductResponse>> getProductOfTheDay() {
