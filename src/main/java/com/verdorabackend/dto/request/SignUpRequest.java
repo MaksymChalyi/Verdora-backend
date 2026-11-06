@@ -19,7 +19,8 @@ public record SignUpRequest(
         @Email(message = "Email must be valid")
         String email,
 
-        @Schema(description = "phone", example = "+380989703417")
+        @Schema(description = "phone", example = "+380989703417", requiredMode = Schema.RequiredMode.REQUIRED)
+        @NotBlank(message = "Phone is required")
         String phone,
 
         @Schema(description = "password", example = "StrongPass1!")
