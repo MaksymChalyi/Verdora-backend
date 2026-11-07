@@ -33,7 +33,9 @@ Backend повертає технічні enum-значення, а user-facing 
 | GET | `/orders/{orderId}/details` | ADMIN | Повні деталі будь-якого замовлення (з даними покупця) |
 | PATCH | `/orders/{orderId}/status` | ADMIN | Змінити статус замовлення |
 
-Всі ендпоінти потребують автентифікації (`accessToken` cookie).
+Всі ендпоінти потребують автентифікації (`accessToken` cookie); без неї — `401`. Адмінські ендпоінти для ролі `USER` повертають `403`. Гостьового оформлення замовлення немає.
+
+> **Обмеження CORS:** `SecurityBeansConfig` дозволяє методи `GET, POST, PUT, DELETE, OPTIONS` — `PATCH` у списку відсутній. Тому `PATCH /orders/{orderId}/status` з браузера з іншого origin (напр. адмін-панель FE) не пройде CORS preflight; з того самого origin, Swagger UI на бекенді чи серверних клієнтів (curl/Postman) запит працює.
 
 ---
 
@@ -173,7 +175,9 @@ Backend повертає технічні enum-значення, а user-facing 
 | `status` | OrderStatus | Фільтр за статусом (`PENDING`, `PAID`, `SHIPPED`, `DELIVERED`, `CANCELLED`) |
 | `dateFrom` | LocalDate | Нижня межа дати створення (включно) |
 | `dateTo` | LocalDate | Верхня межа дати створення (включно) |
-| `page`, `size` | — | Пагінація, default size `12`, сортування `createdAt DESC` |
+| `page`, `size`, `sort` | — | Пагінація, default size `12` (на відміну від `GET /orders`, верхньої межі немає), сортування `createdAt DESC` |
+
+Дати передаються у форматі ISO (`2026-10-01`) і порівнюються з `createdAt` в UTC; `dateTo` включає весь день. Невалідна дата чи статус → `400` (`"Parameter 'dateFrom' must be a valid LocalDate"`).
 
 **Response 200** — `Page<AdminOrderResponse>`. На відміну від `OrderResponse`, елемент містить `customer` (`UserResponse`) замість списку товарів:
 ```json
@@ -278,9 +282,9 @@ Backend повертає технічні enum-значення, а user-facing 
 |---|---|---|
 | `orderItemId` | Long | ID елемента замовлення |
 | `productId` | Long | ID товару |
-| `productName` | String | Назва товару на момент покупки |
-| `imageUrl` | String | URL зображення товару |
-| `categoryName` | String | Назва категорії товару |
+| `productName` | String | **Поточна** назва товару (не знімок — береться з `products` під час запиту) |
+| `imageUrl` | String | Поточний URL зображення товару |
+| `categoryName` | String | Поточна назва категорії товару |
 | `quantity` | Integer | Кількість |
 | `priceAtPurchase` | BigDecimal | Ціна за одиницю на момент покупки |
 | `subtotal` | BigDecimal | `priceAtPurchase × quantity` |
@@ -308,12 +312,15 @@ Backend повертає технічні enum-значення, а user-facing 
 
 ## Бізнес-логіка
 
-- `priceAtPurchase` фіксується на момент оформлення як **ефективна ціна товару** (`Product#getEffectivePrice()`) — тобто `discountPrice`, якщо вона менша за `price`, інакше звичайна `price`. Якщо ціна товару зміниться пізніше — це не вплине на вже оформлене замовлення.
+- `priceAtPurchase` фіксується на момент оформлення як **ефективна ціна товару** (`Product#getEffectivePrice()`) — тобто `discountPrice`, якщо вона менша за `price`, інакше звичайна `price`. Якщо ціна товару зміниться пізніше — це не вплине на вже оформлене замовлення. Знімком є лише ціна: назва, зображення й категорія в `OrderItemResponse` завжди поточні.
+- `totalPrice` = сума `priceAtPurchase × quantity` по всіх позиціях.
+- Оплати немає: замовлення створюється в `PENDING`, у `PAID` його переводить адмін через `PATCH`. Складський облік (списання залишків) не реалізований.
 - Після `POST /orders` кошик **очищається автоматично**, і сам `Cart` не видаляється — лише його елементи.
 - Юзер бачить **тільки свої** замовлення через `GET /orders`, `/orders/{orderId}`, `/orders/{orderId}/status` — чужий `orderId` повертає 404. Повний огляд усіх замовлень доступний лише ADMIN через `/orders/all` і `/orders/{orderId}/details`.
 - Скасувати (`DELETE`) можна лише `PENDING` або `PAID` замовлення; `SHIPPED`/`DELIVERED` повертають 409, уже `CANCELLED` — також 409 з іншим повідомленням.
 - `PATCH /orders/{orderId}/status` (ADMIN) не має обмеження по користувачу і дозволяє лише переходи, описані в `OrderStatus#canTransitionTo` — усі інші повертають 409.
 - Список замовлень (`GET /orders`, `GET /orders/all`) відсортований **від найновіших** (`createdAt DESC`) за замовчуванням.
+- `orders.user_id` має `ON DELETE RESTRICT`: користувач із замовленнями не може видалити акаунт (`DELETE /users/current-user` завершується `500`, окремої обробки цього випадку немає). Товар, що є в будь-якому замовленні, не можна видалити (`409`).
 
 ---
 

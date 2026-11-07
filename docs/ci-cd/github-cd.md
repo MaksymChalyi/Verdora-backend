@@ -1,6 +1,6 @@
 # GitHub Actions — CD
 
-> **Примітка аудиту документації (2026-10-08):** станом на поточний стан репозиторію каталог `.github/workflows/` (і файл `cd.yml`, описаний нижче) **відсутній**, так само як і `Dockerfile`/`docker-compose.yml`, на які спирається цей флоу деплою. Цей документ описує заплановану CD-конфігурацію через Render Deploy Hook, а не те, що фактично налаштоване в репозиторії зараз.
+> **Примітка (оновлено 2026-11-07):** `.github/workflows/cd.yml` і `Dockerfile` присутні в репозиторії; workflow нижче відповідає файлу. Важливо: `cd.yml` **не залежить від CI** — він запускається на кожен push у `main` паралельно з `ci.yml` (немає `needs`/`workflow_run`), тому деплой не чекає на успішні тести. Гарантію «CI зелений перед деплоєм» дає лише branch protection на PR у `main` (налаштовується в GitHub, а не в репозиторії). Налаштування Render (сервіс, змінні середовища, вимкнений Auto-Deploy) з репозиторію перевірити неможливо.
 
 ## What is CD
 
@@ -66,11 +66,11 @@ Render has a built-in Auto-Deploy feature that triggers on every push to `main`.
 | | Auto-Deploy (Render) | Deploy Hook (CD workflow) |
 |---|---|---|
 | Trigger | Every push to `main` | Controlled by GitHub Actions |
-| CI must pass first | ❌ deploys regardless | ✅ CD only runs after CI passes |
+| CI must pass first | ❌ deploys regardless | ⚠️ not enforced by the current `cd.yml` — CD runs in parallel with CI on push to `main` |
 | Visibility | Render dashboard only | GitHub Actions + Render dashboard |
 | Control | Limited | Full |
 
-With Auto-Deploy disabled and CD workflow enabled — Render only deploys when GitHub explicitly tells it to, after CI has already passed.
+With Auto-Deploy disabled and CD workflow enabled — Render only deploys when GitHub explicitly tells it to. In the current setup that happens on every push to `main`, **without waiting for CI**; CI is gated only at PR level (branch protection).
 
 ---
 
@@ -199,7 +199,7 @@ sequenceDiagram
     note over Render: Stage 2 — JRE + JAR only
     Render->>Render: stop old container
     Render->>Render: start new container
-    Render->>DB: Flyway migrations (if any)
+    Render->>DB: App startup runs Flyway (pending migrations, e.g. V19–V24 seed data)
     DB-->>Render: migrations applied
     Render->>Render: health check /health/ping
     Render-->>CD: deploy complete ✅

@@ -115,7 +115,7 @@ public void addAccessToken(HttpServletResponse response, String token) {
             .secure(true)     // лише через HTTPS
             .sameSite("None") // дозволяє cross-site запити з фронтенду на іншому домені
             .path("/")
-            .maxAge(15 * 60)  // 15 хв життя cookie в браузері; сам токен валідний теж 15 хв
+            .maxAge(Duration.ofMillis(jwtProperties.getAccessExpirationMs())) // 15 хв — як і сам токен
             .build();
 
     response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
@@ -128,7 +128,7 @@ public void addAccessToken(HttpServletResponse response, String token) {
 ```
 Це означає, що браузер надсилає `refreshToken` лише при зверненні до `/auth/refresh` — він не подорожує з кожним запитом.
 
-> **Важливо:** cookie `accessToken` живе в браузері 1 годину (`maxAge`), але сам JWT-токен валідний лише **15 хвилин** (`exp`-claim). Після 15 хвилин cookie ще існує, але сервер відхилить токен як протермінований (`TokenExpiredException` → 401) — саме тому потрібен `POST /auth/refresh`.
+> **Важливо:** `maxAge` обох cookies береться з тих самих налаштувань, що й `exp` токенів (`access-expiration-ms`, `refresh-expiration-ms`), тому cookie `accessToken` зникає з браузера одночасно із закінченням дії JWT — через **15 хвилин**. Після цього захищені запити йдуть без `accessToken` і отримують `401` — саме тому потрібен `POST /auth/refresh`. Автоматичного оновлення токена у фільтрі немає.
 
 ### Валідація кожного запиту — `JwtAuthenticationFilter`
 
@@ -266,7 +266,7 @@ sequenceDiagram
 ```yaml
 app:
   jwt:
-    secret: ${JWT_SECRET:3qzqVSvMGFVncul6arlN0Na0F/YcSbmJyvICg43Q2cQ=}
+    secret: ${JWT_SECRET:<dev-default>}  # фактичне dev-значення див. у application.yaml
     access-expiration-ms: 900000     # 15 хв
     refresh-expiration-ms: 604800000 # 7 днів
 ```

@@ -1,6 +1,6 @@
 # GitHub Actions — CI
 
-> **Примітка аудиту документації (2026-10-08):** станом на поточний стан репозиторію каталог `.github/workflows/` (і файл `ci.yml`, описаний нижче) **відсутній**. Цей документ описує заплановану CI-конфігурацію, а не те, що фактично виконується в репозиторії зараз. Команди `mvn clean compile`, `mvn test`, `mvn package`, `mvn spotless:check` з прикладу нижче відповідають реальним цілям Maven, визначеним у `pom.xml` (Flyway, Spotless-плагін присутні), але сам workflow-файл GitHub Actions ще не створено.
+> **Примітка (оновлено 2026-11-07):** `.github/workflows/ci.yml` присутній у репозиторії; workflow нижче відповідає файлу (коментарі у файлі можуть відрізнятися). Інтеграційні тести (`BaseIntegrationTest`, профіль `test`) працюють на in-memory **H2** з Flyway `target: 18` та тестовими даними `db/testdata` (V11/V12), а не на PostgreSQL-сервісі — showcase-міграції V19–V24 у тестах не застосовуються. PostgreSQL-сервіс у CI потрібен для `VerdoraBackendApplicationTests` (`@SpringBootTest` без профілю `test`). Детальніше — [Database](../database/database.md).
 
 ## What is CI
 

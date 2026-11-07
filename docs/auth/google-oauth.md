@@ -153,7 +153,7 @@ cookieService.addRefreshToken(response, result.refreshToken());
 response.sendRedirect(oAuth2Properties.getRedirectUri()); // http://localhost:5173
 ```
 
-Браузер отримує cookies і перенаправляється на фронтенд — користувач тепер автентифікований. `accessToken` живе в браузері 1 годину, але сам JWT валідний **15 хвилин** (як і при звичайному логіні — див. [JWT](./jwt.md)).
+Браузер отримує cookies і перенаправляється на фронтенд — користувач тепер автентифікований. І cookie `accessToken`, і сам JWT живуть **15 хвилин** (як і при звичайному логіні — див. [JWT](./jwt.md)).
 
 ### Чому OAuth2 потребує сесію
 

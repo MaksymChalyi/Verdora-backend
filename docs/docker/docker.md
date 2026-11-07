@@ -1,6 +1,6 @@
 # Docker
 
-> **Примітка аудиту документації (2026-10-08):** станом на поточний стан репозиторію файли `Dockerfile` та `docker-compose.yml`, описані нижче, **відсутні** у кореневій директорії проєкту. Цей документ описує заплановану/цільову інфраструктуру контейнеризації, а не те, що фактично присутнє в коді зараз. Команди `docker build`, `docker run` та `docker-compose up` з цього документа наразі не спрацюють без створення відповідних файлів.
+> **Примітка (оновлено 2026-11-07):** `Dockerfile` та `docker-compose.yml` присутні в корені репозиторію; фрагменти нижче відповідають їм. Зверніть увагу: `docker-compose.yml` **не передає** в контейнер `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`, а `application.yaml` не має для них default-значень — їх потрібно додати в `environment` сервісу `app` (або запускати з `--env-file`), інакше плейсхолдери `${CLOUDINARY_*}` не розв'яжуться під час старту.
 
 ## What is Docker and Why
 
@@ -164,7 +164,7 @@ services:
       retries: 5
 
   app:
-    build: ..
+    build: .
     container_name: verdora-app
     depends_on:
       db:
@@ -184,6 +184,12 @@ services:
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
       REDIRECT_URL: ${REDIRECT_URL}
+      MAIL_FROM: ${MAIL_FROM}
+      FRONTEND_URL: ${FRONTEND_URL}
+      ALLOWED_ORIGIN_1: ${ALLOWED_ORIGIN_1}
+      ALLOWED_ORIGIN_2: ${ALLOWED_ORIGIN_2}
+      ALLOWED_ORIGIN_3: ${ALLOWED_ORIGIN_3}
+      SENDGRID_API_KEY: ${SENDGRID_API_KEY}
     ports:
       - "8081:8081"
 
@@ -254,7 +260,7 @@ sequenceDiagram
     Compose->>App: Start container (depends_on satisfied)
     App->>DB: Connect jdbc:postgresql://db:5432/verdora_db
     DB-->>App: Connection OK
-    App->>DB: Flyway migrations (8 migrations)
+    App->>DB: Flyway migrations (V1–V24, incl. showcase data)
     DB-->>App: Migrations applied
     App-->>Compose: Tomcat started on port 8081 ✅
 ```
