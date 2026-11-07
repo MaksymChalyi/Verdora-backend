@@ -17,6 +17,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.PositiveOrZero;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -52,10 +53,14 @@ public class ProductController {
             @RequestParam(required = false) Long categoryId,
 
             @Parameter(description = "Minimum price")
-            @RequestParam(required = false) BigDecimal minPrice,
+            @RequestParam(required = false)
+            @PositiveOrZero(message = "minPrice cannot be less than 0")
+            BigDecimal minPrice,
 
             @Parameter(description = "Maximum price")
-            @RequestParam(required = false) BigDecimal maxPrice,
+            @RequestParam(required = false)
+            @PositiveOrZero(message = "maxPrice cannot be less than 0")
+            BigDecimal maxPrice,
 
             @Parameter(description = "Only products with discount (discountPrice < price)")
             @RequestParam(required = false) Boolean discount,
