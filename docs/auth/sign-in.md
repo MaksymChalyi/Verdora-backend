@@ -39,7 +39,7 @@ Cookies, що встановлюються автоматично:
 
 | Cookie | HttpOnly | Secure | SameSite | Path | Max-Age cookie / термін дії JWT |
 |---|---|---|---|---|---|
-| `accessToken` | ✅ | ✅ | None | `/` | 1 година / **15 хвилин** |
+| `accessToken` | ✅ | ✅ | None | `/` | **15 хвилин** / **15 хвилин** |
 | `refreshToken` | ✅ | ✅ | None | `/auth/refresh` | 7 днів / 7 днів |
 
 ### Помилка `401`
@@ -48,10 +48,16 @@ Cookies, що встановлюються автоматично:
 {
   "timestamp": "2026-04-21T13:55:49.773Z",
   "status": 401,
-  "message": "Invalid email or password",
+  "message": "Bad credentials",
   "data": null
 }
 ```
+
+> Повертається і при невірному паролі, і при неіснуючому email. `message` береться з `BadCredentialsException`, яку кидає Spring Security (`DaoAuthenticationProvider`, стандартне повідомлення — `"Bad credentials"`; неіснуючий email також маскується під цей виняток). Приклад `"Invalid email or password"` у Swagger-анотації `AuthController` з фактичною відповіддю не збігається.
+
+### Помилка `400`
+
+Невалідне тіло запиту (`@Valid`): порожній `email`/`password` або некоректний формат email.
 
 ## Flow
 
@@ -102,7 +108,7 @@ sequenceDiagram
 
 ### 1. Запит потрапляє в `AuthController`
 
-Запит досягає `AuthController.login()`, який одразу делегує роботу `AuthService.login(request)`. На відміну від `/auth/register`, тут **немає анотації `@Valid`** на рівні контролера — формальна валідація email/пароля (крім `@NotBlank`/`@Email` у самому DTO) тут не відбувається додатково; невідповідність облікових даних обробляється на рівні автентифікації.
+Запит досягає `AuthController.login(@Valid @RequestBody SignInRequest ...)`, який делегує роботу `AuthService.login(request)`. `@Valid` перевіряє лише формат (`@NotBlank` для обох полів, `@Email` для `email`) і при помилці повертає `400`; невідповідність облікових даних обробляється далі, на рівні автентифікації.
 
 ### 2. `AuthenticationManager` — ядро флоу (`AuthServiceImpl.login`)
 
@@ -152,7 +158,7 @@ String refreshToken = jwtService.generateRefreshToken(principal);
 
 Після повернення `AuthResult` з `AuthServiceImpl`, саме `AuthController` встановлює два `HttpOnly` cookies через `CookieService`:
 
-- **`accessToken`** — path `/`, живе 1 годину в браузері, сам JWT валідний **15 хвилин**. Надсилається автоматично з кожним запитом до backend.
+- **`accessToken`** — path `/`, і cookie, і сам JWT живуть **15 хвилин** (`app.jwt.access-expiration-ms`). Надсилається автоматично з кожним запитом до backend.
 - **`refreshToken`** — path `/auth/refresh`, 7 днів. Надсилається лише коли фронтенд явно звертається до `/auth/refresh`, а не з кожним запитом.
 
 `HttpOnly` означає, що JavaScript не може прочитати ці cookies — захист від XSS-атак. Обидва cookies також мають `secure(true)` і `sameSite("None")` (`CookieService`), тобто працюють лише через HTTPS і дозволяють cross-site запити з фронтенду на іншому домені.
