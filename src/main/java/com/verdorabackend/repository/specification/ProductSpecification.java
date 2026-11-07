@@ -36,8 +36,12 @@ public class ProductSpecification {
                 predicates.add(cb.lessThanOrEqualTo(root.get("price"), maxPrice));
             }
 
-            if (Boolean.TRUE.equals(discount)) {
-                predicates.add(cb.lessThan(root.get("discountPrice"), root.get("price")));
+            if (discount != null) {
+                if (discount) {
+                    predicates.add(cb.lessThan(root.get("discountPrice"), root.get("price")));
+                } else {
+                    predicates.add(cb.or(cb.isNull(root.get("discountPrice")), cb.greaterThanOrEqualTo(root.get("discountPrice"), root.get("price"))));
+                }
             }
 
             // search - пошук по назві (case-insensitive)

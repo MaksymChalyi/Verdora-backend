@@ -9,6 +9,8 @@ import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
+import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -106,6 +108,32 @@ class ProductControllerIntegrationTest extends BaseIntegrationTest {
         mockMvc.perform(get("/products?search=НОУТБУК"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.content").isNotEmpty());
+    }
+
+    @Test
+    void getProducts_discountTrue_returnsOnlyDiscountedProducts()
+            throws Exception {
+
+        mockMvc.perform(get("/products")
+                        .param("discount", "true"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath(
+                        "$.data.content[*].productId",
+                        containsInAnyOrder(1, 3)
+                ));
+    }
+
+    @Test
+    void getProducts_discountFalse_returnsOnlyNonDiscountedProducts()
+            throws Exception {
+
+        mockMvc.perform(get("/products")
+                        .param("discount", "false"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath(
+                        "$.data.content[*].productId",
+                        contains(2)
+                ));
     }
 
     // ── GET /products/{id} ────────────────────────────────────────────────────
