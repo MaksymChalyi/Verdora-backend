@@ -1,9 +1,13 @@
 package com.verdorabackend.controller;
 
+import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
 
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -45,6 +49,34 @@ class AuthControllerIntegrationTest extends BaseIntegrationTest {
                 .andExpect(status().isUnauthorized());
     }
 
+    @Test
+    void login_thenGetCurrentUser_returns200() throws Exception {
+        String body = """
+                {
+                  "email": "admin@verdora.com",
+                  "password": "Password1!"
+                }
+                """;
+
+        MvcResult loginResult = mockMvc.perform(post("/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isOk())
+                .andExpect(cookie().exists("accessToken"))
+                .andReturn();
+
+        Cookie accessToken = loginResult.getResponse()
+                .getCookie("accessToken");
+
+        assertNotNull(accessToken);
+
+        mockMvc.perform(get("/users/current-user")
+                        .cookie(accessToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.email")
+                        .value("admin@verdora.com"));
+    }
+
     // ── POST /auth/logout ─────────────────────────────────────────────────────
 
     @Test
@@ -77,13 +109,13 @@ class AuthControllerIntegrationTest extends BaseIntegrationTest {
     @Test
     void register_allRequiredFieldsEmpty_returns400() throws Exception {
         String body = """
-            {
-              "name": "",
-              "email": "",
-              "phone": "",
-              "password": ""
-            }
-            """;
+                {
+                  "name": "",
+                  "email": "",
+                  "phone": "",
+                  "password": ""
+                }
+                """;
 
         mockMvc.perform(post("/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
