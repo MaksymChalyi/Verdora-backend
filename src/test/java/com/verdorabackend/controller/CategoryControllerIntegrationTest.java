@@ -1,9 +1,12 @@
 package com.verdorabackend.controller;
 
+import com.verdorabackend.repository.CategoryRepository;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.transaction.annotation.Transactional;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.hasItem;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -11,6 +14,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @Transactional
 class CategoryControllerIntegrationTest extends BaseIntegrationTest {
+
+    @Autowired
+    private CategoryRepository categoryRepository;
 
     // ── GET /categories ───────────────────────────────────────────────────────
 
@@ -149,6 +155,28 @@ class CategoryControllerIntegrationTest extends BaseIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void createCategory_withoutAuthentication_doesNotCreateCategory()
+            throws Exception {
+
+        long countBefore = categoryRepository.count();
+
+        String body = """
+                {
+                  "name": "Unauthorized Category",
+                  "imageUrl": "https://example.com/image.jpg"
+                }
+                """;
+
+        mockMvc.perform(post("/categories")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isUnauthorized());
+
+        assertThat(categoryRepository.count())
+                .isEqualTo(countBefore);
     }
 
     // ── GET /categories/{id} ──────────────────────────────────────────────────
