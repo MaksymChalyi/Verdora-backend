@@ -786,6 +786,10 @@ class ProductControllerIntegrationTest extends BaseIntegrationTest {
         mockMvc.perform(get("/products/product-of-the-day"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.productId").value(2));
+
+        mockMvc.perform(get("/products/product-of-the-day"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.productId").value(2));
     }
 
     @Test
