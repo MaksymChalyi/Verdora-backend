@@ -4,8 +4,10 @@ import com.verdorabackend.dto.auth.AuthResult;
 import com.verdorabackend.service.AuthService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
@@ -31,6 +33,13 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
         cookieService.addAccessToken(response, result.accessToken());
         cookieService.addRefreshToken(response, result.refreshToken());
 
+        // OAuth2 session is no longer needed after JWT issuance.
+        HttpSession session = request.getSession(false);
+        if (session != null) {
+            session.invalidate();
+        }
+
+        SecurityContextHolder.clearContext();
         response.sendRedirect(oAuth2Properties.getRedirectUri());
     }
 }
