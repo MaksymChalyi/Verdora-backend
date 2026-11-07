@@ -3,12 +3,18 @@ package com.verdorabackend.security;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.stereotype.Component;
 
+import java.time.Duration;
+
 @Component
+@RequiredArgsConstructor
 public class CookieService {
+
+    private final JwtProperties jwtProperties;
 
     public void clearAuthCookies(HttpServletResponse response) {
         clearAccessToken(response);
@@ -22,7 +28,7 @@ public class CookieService {
                 .secure(true)
                 .sameSite("None")
                 .path("/")
-                .maxAge(60 * 60)
+                .maxAge(Duration.ofMillis(jwtProperties.getAccessExpirationMs()))
                 .build();
 
         response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
@@ -34,7 +40,7 @@ public class CookieService {
                 .secure(true)
                 .sameSite("None")
                 .path("/auth/refresh")
-                .maxAge(7 * 24 * 60 * 60)
+                .maxAge(Duration.ofMillis(jwtProperties.getRefreshExpirationMs()))
                 .build();
 
         response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());

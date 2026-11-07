@@ -115,7 +115,7 @@ public void addAccessToken(HttpServletResponse response, String token) {
             .secure(true)     // лише через HTTPS
             .sameSite("None") // дозволяє cross-site запити з фронтенду на іншому домені
             .path("/")
-            .maxAge(60 * 60)  // 1 година життя cookie в браузері; сам токен валідний лише 15 хв
+            .maxAge(15 * 60)  // 15 хв життя cookie в браузері; сам токен валідний теж 15 хв
             .build();
 
     response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
