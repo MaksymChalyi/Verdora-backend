@@ -321,6 +321,29 @@ class ProductControllerIntegrationTest extends BaseIntegrationTest {
                         .value("Product Without Discount"));
     }
 
+    @Test
+    void createProduct_invalidImageUrl_returns400() throws Exception {
+        String body = """
+                {
+                  "name": "Laptop",
+                  "description": "Test",
+                  "price": 500,
+                  "categoryId": 1,
+                  "imageUrl": "478",
+                  "discountPrice": 300
+                }
+                """;
+
+        mockMvc.perform(post("/products")
+                        .cookie(adminCookie())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.message")
+                        .value("Image URL must be a valid HTTPS URL"));
+    }
+
     // ── PUT /products/{id} ─────────────────────────────────────────────────────
 
     @Test

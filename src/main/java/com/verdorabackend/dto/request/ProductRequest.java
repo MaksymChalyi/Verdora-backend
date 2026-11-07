@@ -6,6 +6,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
+import org.hibernate.validator.constraints.URL;
 
 import java.math.BigDecimal;
 
@@ -35,8 +36,10 @@ public record ProductRequest(
         @Positive(message = "Category ID must be greater than zero")
         Long categoryId,
 
-        @Schema(description = "Product image", example = "https://site.com/image.jpg")
+        @Schema(description = "Product image URL", example = "https://site.com/image.jpg")
         @NotBlank(message = "Image is required")
+        @Size(max = 512, message = "Image URL must not exceed 512 characters")
+        @URL(protocol = "https", message = "Image URL must be a valid HTTPS URL")
         String imageUrl,
 
         @Schema(description = "Product discount price",
