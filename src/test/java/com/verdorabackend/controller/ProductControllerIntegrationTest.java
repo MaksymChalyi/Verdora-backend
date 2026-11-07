@@ -136,6 +136,62 @@ class ProductControllerIntegrationTest extends BaseIntegrationTest {
                 ));
     }
 
+    @Test
+    void getProducts_sortByEffectivePriceAscending() throws Exception {
+        jdbcTemplate.update("""
+                UPDATE products
+                SET price = 500, discount_price = 300
+                WHERE product_id = 1
+                """);
+
+        jdbcTemplate.update("""
+                UPDATE products
+                SET price = 450, discount_price = NULL
+                WHERE product_id = 2
+                """);
+
+        jdbcTemplate.update("""
+                UPDATE products
+                SET price = 600, discount_price = 450
+                WHERE product_id = 3
+                """);
+
+        mockMvc.perform(get("/products")
+                        .param("sort", "price,asc"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content[0].productId").value(1))
+                .andExpect(jsonPath("$.data.content[1].productId").value(2))
+                .andExpect(jsonPath("$.data.content[2].productId").value(3));
+    }
+
+    @Test
+    void getProducts_sortByEffectivePriceDescending() throws Exception {
+        jdbcTemplate.update("""
+                UPDATE products
+                SET price = 500, discount_price = 300
+                WHERE product_id = 1
+                """);
+
+        jdbcTemplate.update("""
+                UPDATE products
+                SET price = 450, discount_price = NULL
+                WHERE product_id = 2
+                """);
+
+        jdbcTemplate.update("""
+                UPDATE products
+                SET price = 600, discount_price = 450
+                WHERE product_id = 3
+                """);
+
+        mockMvc.perform(get("/products")
+                        .param("sort", "price,desc"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content[0].productId").value(2))
+                .andExpect(jsonPath("$.data.content[1].productId").value(3))
+                .andExpect(jsonPath("$.data.content[2].productId").value(1));
+    }
+
     // ── GET /products/{id} ────────────────────────────────────────────────────
 
     @Test

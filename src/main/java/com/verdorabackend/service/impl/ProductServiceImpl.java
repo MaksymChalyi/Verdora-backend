@@ -24,6 +24,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -31,6 +32,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -57,7 +59,17 @@ public class ProductServiceImpl implements ProductService {
             Pageable pageable
     ) {
         Specification<Product> spec = ProductSpecification.filter(categoryId, minPrice, maxPrice, discount, search);
-        Page<Product> products = productRepository.findAll(spec, pageable);
+        List<Sort.Order> orders = pageable.getSort()
+                .stream()
+                .map(order -> "price".equals(order.getProperty()) ? order.withProperty("sortPrice") : order)
+                .toList();
+
+        Sort sort = orders.isEmpty() ? Sort.unsorted() : Sort.by(orders);
+        if (pageable.getSort().getOrderFor("price") != null && sort.getOrderFor("id") == null) {
+            sort = sort.and(Sort.by("id"));
+        }
+        Pageable effectivePageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
+        Page<Product> products = productRepository.findAll(spec, effectivePageable);
         Long userId = currentUserId();
 
         if (userId == null || products.isEmpty()) {
@@ -73,10 +85,7 @@ public class ProductServiceImpl implements ProductService {
         Set<Long> favoriteIds = favoriteRepository.findFavoriteProductIds(userId, productIds);
 
         return products.map(product ->
-                withFavorite(
-                        productMapper.toResponse(product),
-                        favoriteIds.contains(product.getId())
-                )
+                withFavorite(productMapper.toResponse(product), favoriteIds.contains(product.getId()))
         );
     }
 

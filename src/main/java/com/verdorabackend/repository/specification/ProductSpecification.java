@@ -1,6 +1,7 @@
 package com.verdorabackend.repository.specification;
 
 import com.verdorabackend.entity.Product;
+import jakarta.persistence.criteria.Path;
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.jpa.domain.Specification;
 
@@ -24,27 +25,29 @@ public class ProductSpecification {
         return (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
+            Path<BigDecimal> effectivePrice = root.get("sortPrice");
+            Path<BigDecimal> originalPrice = root.get("price");
+
             if (categoryId != null) {
                 predicates.add(cb.equal(root.get("category").get("id"), categoryId));
             }
 
             if (minPrice != null) {
-                predicates.add(cb.greaterThanOrEqualTo(root.get("price"), minPrice));
+                predicates.add(cb.greaterThanOrEqualTo(effectivePrice, minPrice));
             }
 
             if (maxPrice != null) {
-                predicates.add(cb.lessThanOrEqualTo(root.get("price"), maxPrice));
+                predicates.add(cb.lessThanOrEqualTo(effectivePrice, maxPrice));
             }
 
             if (discount != null) {
                 if (discount) {
-                    predicates.add(cb.lessThan(root.get("discountPrice"), root.get("price")));
+                    predicates.add(cb.lessThan(effectivePrice, originalPrice));
                 } else {
-                    predicates.add(cb.or(cb.isNull(root.get("discountPrice")), cb.greaterThanOrEqualTo(root.get("discountPrice"), root.get("price"))));
+                    predicates.add(cb.equal(effectivePrice, originalPrice));
                 }
             }
 
-            // search - пошук по назві (case-insensitive)
             if (search != null && !search.isBlank()) {
                 String pattern = "%" + search.trim().toLowerCase(Locale.ROOT) + "%";
                 predicates.add(cb.like(cb.lower(root.get("name")), pattern));
