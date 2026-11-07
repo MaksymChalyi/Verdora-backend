@@ -104,7 +104,11 @@ public class CartServiceImpl implements CartService {
 
         validateItemBelongsToCart(item, cart);
 
-        cart.getItems().removeIf(cartItem -> cartItem.getId().equals(cartItemId));
+        boolean removed = cart.getItems().removeIf(cartItem -> cartItem.getId().equals(cartItemId));
+        if (!removed) {
+            throw new CartItemNotFoundException(cartItemId);
+        }
+
         log.info("CartItem={} removed from cart={}", cartItemId, cart.getId());
 
         return buildCartResponse(cart);

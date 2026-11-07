@@ -189,6 +189,12 @@ class CartControllerIntegrationTest extends BaseIntegrationTest {
 
     @Test
     void removeItem_existingItem_removesFromCart() throws Exception {
+        mockMvc.perform(delete("/cart")
+                        .cookie(userCookie()))
+                .andExpect(status().isOk());
+
+        entityManager.flush();
+        entityManager.clear();
         MvcResult added = mockMvc.perform(post("/cart/items")
                         .cookie(userCookie())
                         .contentType(MediaType.APPLICATION_JSON)
