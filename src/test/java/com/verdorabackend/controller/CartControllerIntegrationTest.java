@@ -1,7 +1,12 @@
 package com.verdorabackend.controller;
 
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -10,6 +15,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @Transactional
 class CartControllerIntegrationTest extends BaseIntegrationTest {
+
+    @Autowired
+    private EntityManager entityManager;
 
     // ── GET /cart ─────────────────────────────────────────────────────────────
 
@@ -136,6 +144,25 @@ class CartControllerIntegrationTest extends BaseIntegrationTest {
                         .value("Malformed JSON request"));
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "{\"productId\": \"A\", \"quantity\": 1}",
+            "{\"productId\": 1, \"quantity\": \"A\"}",
+            "{\"productId\": \"A\", \"quantity\": \"A\"}",
+            "{\"productId\": A, \"quantity\": A}"
+    })
+    void addItem_withNonNumericFields_returns400(String body)
+            throws Exception {
+
+        mockMvc.perform(post("/cart/items")
+                        .cookie(userCookie())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.message")
+                        .value("Malformed JSON request"));
+    }
 
     // ── PUT /cart/items/{id} ──────────────────────────────────────────────────
     @Test
@@ -158,6 +185,47 @@ class CartControllerIntegrationTest extends BaseIntegrationTest {
         mockMvc.perform(delete("/cart/items/99999")
                         .cookie(userCookie()))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void removeItem_existingItem_removesFromCart() throws Exception {
+        mockMvc.perform(delete("/cart")
+                        .cookie(userCookie()))
+                .andExpect(status().isOk());
+
+        entityManager.flush();
+        entityManager.clear();
+        MvcResult added = mockMvc.perform(post("/cart/items")
+                        .cookie(userCookie())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "productId": 1,
+                                  "quantity": 2
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        long cartItemId = objectMapper
+                .readTree(added.getResponse().getContentAsString())
+                .at("/data/items/0/cartItemId")
+                .asLong();
+
+        mockMvc.perform(delete("/cart/items/{cartItemId}", cartItemId)
+                        .cookie(userCookie()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items").isEmpty())
+                .andExpect(jsonPath("$.data.totalPrice").value(0));
+
+        entityManager.flush();
+        entityManager.clear();
+
+        mockMvc.perform(get("/cart")
+                        .cookie(userCookie()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items").isEmpty())
+                .andExpect(jsonPath("$.data.totalPrice").value(0));
     }
 
     // ── DELETE /cart ──────────────────────────────────────────────────────────

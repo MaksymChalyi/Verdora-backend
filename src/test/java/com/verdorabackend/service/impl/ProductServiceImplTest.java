@@ -70,7 +70,7 @@ class ProductServiceImplTest {
     void getProducts_returnsMappedProducts() {
         Product product = mock(Product.class);
         ProductResponse response = mock(ProductResponse.class);
-        Pageable pageable = mock(Pageable.class);
+        Pageable pageable = PageRequest.of(0, 10);
 
         Page<Product> productPage = new PageImpl<>(List.of(product));
 

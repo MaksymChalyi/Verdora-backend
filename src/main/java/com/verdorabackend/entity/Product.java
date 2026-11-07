@@ -8,6 +8,7 @@ import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.Formula;
 import org.hibernate.validator.constraints.URL;
 
 import java.math.BigDecimal;
@@ -54,6 +55,17 @@ public class Product {
     @PositiveOrZero
     @Column(name = "discount_price", precision = 10, scale = 2)
     private BigDecimal discountPrice;
+
+    @Formula("""
+            CASE
+                WHEN discount_price IS NOT NULL
+                     AND discount_price > 0
+                     AND discount_price < price
+                THEN discount_price
+                ELSE price
+            END
+            """)
+    private BigDecimal sortPrice;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;

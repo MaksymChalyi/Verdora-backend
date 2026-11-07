@@ -9,6 +9,8 @@ import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
+import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -106,6 +108,108 @@ class ProductControllerIntegrationTest extends BaseIntegrationTest {
         mockMvc.perform(get("/products?search=НОУТБУК"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.content").isNotEmpty());
+    }
+
+    @Test
+    void getProducts_discountTrue_returnsOnlyDiscountedProducts()
+            throws Exception {
+
+        mockMvc.perform(get("/products")
+                        .param("discount", "true"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath(
+                        "$.data.content[*].productId",
+                        containsInAnyOrder(1, 3)
+                ));
+    }
+
+    @Test
+    void getProducts_discountFalse_returnsOnlyNonDiscountedProducts()
+            throws Exception {
+
+        mockMvc.perform(get("/products")
+                        .param("discount", "false"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath(
+                        "$.data.content[*].productId",
+                        contains(2)
+                ));
+    }
+
+    @Test
+    void getProducts_sortByEffectivePriceAscending() throws Exception {
+        prepareEffectivePriceTestData();
+
+        mockMvc.perform(get("/products")
+                        .param("sort", "price,asc"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content[0].productId").value(1))
+                .andExpect(jsonPath("$.data.content[1].productId").value(2))
+                .andExpect(jsonPath("$.data.content[2].productId").value(3));
+    }
+
+    @Test
+    void getProducts_sortByEffectivePriceDescending() throws Exception {
+        prepareEffectivePriceTestData();
+
+        mockMvc.perform(get("/products")
+                        .param("sort", "price,desc"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content[0].productId").value(2))
+                .andExpect(jsonPath("$.data.content[1].productId").value(3))
+                .andExpect(jsonPath("$.data.content[2].productId").value(1));
+    }
+
+    @Test
+    void getProducts_minPrice_usesEffectivePrice() throws Exception {
+        prepareEffectivePriceTestData();
+
+        mockMvc.perform(get("/products")
+                        .param("minPrice", "400"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath(
+                        "$.data.content[*].productId",
+                        containsInAnyOrder(2, 3)
+                ));
+    }
+
+    @Test
+    void getProducts_maxPrice_usesEffectivePrice() throws Exception {
+        prepareEffectivePriceTestData();
+
+        mockMvc.perform(get("/products")
+                        .param("maxPrice", "400"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath(
+                        "$.data.content[*].productId",
+                        contains(1)
+                ));
+    }
+
+    @Test
+    void getProducts_sortByEffectivePrice_withPagination() throws Exception {
+        prepareEffectivePriceTestData();
+
+        mockMvc.perform(get("/products")
+                        .param("sort", "price,asc")
+                        .param("page", "0")
+                        .param("size", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content[0].productId").value(1));
+
+        mockMvc.perform(get("/products")
+                        .param("sort", "price,asc")
+                        .param("page", "1")
+                        .param("size", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content[0].productId").value(2));
+
+        mockMvc.perform(get("/products")
+                        .param("sort", "price,asc")
+                        .param("page", "2")
+                        .param("size", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content[0].productId").value(3));
     }
 
     // ── GET /products/{id} ────────────────────────────────────────────────────
@@ -291,6 +395,29 @@ class ProductControllerIntegrationTest extends BaseIntegrationTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.name")
                         .value("Product Without Discount"));
+    }
+
+    @Test
+    void createProduct_invalidImageUrl_returns400() throws Exception {
+        String body = """
+                {
+                  "name": "Laptop",
+                  "description": "Test",
+                  "price": 500,
+                  "categoryId": 1,
+                  "imageUrl": "478",
+                  "discountPrice": 300
+                }
+                """;
+
+        mockMvc.perform(post("/products")
+                        .cookie(adminCookie())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.message")
+                        .value("Image URL must be a valid HTTPS URL"));
     }
 
     // ── PUT /products/{id} ─────────────────────────────────────────────────────
@@ -758,6 +885,10 @@ class ProductControllerIntegrationTest extends BaseIntegrationTest {
         mockMvc.perform(get("/products/product-of-the-day"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.productId").value(2));
+
+        mockMvc.perform(get("/products/product-of-the-day"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.productId").value(2));
     }
 
     @Test
@@ -769,6 +900,26 @@ class ProductControllerIntegrationTest extends BaseIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value(200))
                 .andExpect(jsonPath("$.data").value(org.hamcrest.Matchers.nullValue()));
+    }
+
+    private void prepareEffectivePriceTestData() {
+        jdbcTemplate.update("""
+                UPDATE products
+                SET price = 500, discount_price = 300
+                WHERE product_id = 1
+                """);
+
+        jdbcTemplate.update("""
+                UPDATE products
+                SET price = 450, discount_price = NULL
+                WHERE product_id = 2
+                """);
+
+        jdbcTemplate.update("""
+                UPDATE products
+                SET price = 600, discount_price = 450
+                WHERE product_id = 3
+                """);
     }
 
 }

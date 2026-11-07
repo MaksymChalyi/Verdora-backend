@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.ZoneOffset;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -525,6 +526,35 @@ class OrderControllerIntegrationTest extends BaseIntegrationTest {
                                 }
                                 """))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void updateOrderStatus_cancelledToShipped_returns409()
+            throws Exception {
+
+        Order order = createOrder(
+                OrderStatus.CANCELLED,
+                BigDecimal.valueOf(100)
+        );
+
+        mockMvc.perform(patch("/orders/{orderId}/status", order.getId())
+                        .cookie(adminCookie())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "status": "SHIPPED"
+                                }
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.status").value(409))
+                .andExpect(jsonPath("$.message").value(
+                        "Invalid order status transition: CANCELLED -> SHIPPED"
+                ));
+
+        assertThat(orderRepository.findById(order.getId())
+                .orElseThrow()
+                .getStatus())
+                .isEqualTo(OrderStatus.CANCELLED);
     }
 
     // ── DELETE /orders/{id} ───────────────────────────────────────────────────
