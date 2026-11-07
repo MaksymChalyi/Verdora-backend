@@ -1,6 +1,8 @@
 package com.verdorabackend.controller;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.http.MediaType;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -136,6 +138,25 @@ class CartControllerIntegrationTest extends BaseIntegrationTest {
                         .value("Malformed JSON request"));
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "{\"productId\": \"A\", \"quantity\": 1}",
+            "{\"productId\": 1, \"quantity\": \"A\"}",
+            "{\"productId\": \"A\", \"quantity\": \"A\"}",
+            "{\"productId\": A, \"quantity\": A}"
+    })
+    void addItem_withNonNumericFields_returns400(String body)
+            throws Exception {
+
+        mockMvc.perform(post("/cart/items")
+                        .cookie(userCookie())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.message")
+                        .value("Malformed JSON request"));
+    }
 
     // ── PUT /cart/items/{id} ──────────────────────────────────────────────────
     @Test
