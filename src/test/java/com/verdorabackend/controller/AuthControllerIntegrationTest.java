@@ -72,4 +72,37 @@ class AuthControllerIntegrationTest extends BaseIntegrationTest {
                 .andExpect(status().isOk());
     }
 
+    // ── POST /auth/register ────────────────────────────────────────────
+
+    @Test
+    void register_allRequiredFieldsEmpty_returns400() throws Exception {
+        String body = """
+            {
+              "name": "",
+              "email": "",
+              "phone": "",
+              "password": ""
+            }
+            """;
+
+        mockMvc.perform(post("/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.message").isNotEmpty())
+                .andExpect(cookie().doesNotExist("accessToken"))
+                .andExpect(cookie().doesNotExist("refreshToken"));
+    }
+
+    @Test
+    void register_allRequiredFieldsMissing_returns400() throws Exception {
+        mockMvc.perform(post("/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.message").isNotEmpty());
+    }
+
 }
