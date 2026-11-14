@@ -23,7 +23,8 @@ public record ProductRequest(
                 description = "Product description",
                 example = "High-performance gaming laptop with 16GB RAM"
         )
-        @Size(max = 1000)
+        @NotBlank(message = "Description is required")
+        @Size(max = 1000, message = "Description must not exceed 1000 characters")
         String description,
 
         @Schema(description = "Product price", example = "500")
