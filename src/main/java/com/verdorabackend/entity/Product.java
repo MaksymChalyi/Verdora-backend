@@ -32,8 +32,9 @@ public class Product {
     @Column(name = "name", nullable = false, length = 256)
     private String name;
 
+    @NotBlank
     @Size(max = 1000)
-    @Column(name = "description", length = 1000)
+    @Column(name = "description", nullable = false, length = 1000)
     private String description;
 
     @NotNull

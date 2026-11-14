@@ -359,6 +359,7 @@ class ProductControllerIntegrationTest extends BaseIntegrationTest {
         String body = """
                 {
                   "name": "Test Product",
+                  "description": "Description",
                   "price": 1000,
                   "categoryId": 1,
                   "imageUrl": "https://example.com/image.jpg",
@@ -378,10 +379,50 @@ class ProductControllerIntegrationTest extends BaseIntegrationTest {
     }
 
     @Test
+    void createProduct_missingDescription_returns400() throws Exception {
+        String body = """
+                {
+                  "name": "Product Without Description",
+                  "price": 1000,
+                  "categoryId": 1,
+                  "imageUrl": "https://example.com/image.jpg"
+                }
+                """;
+
+        mockMvc.perform(post("/products")
+                        .cookie(adminCookie())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Description is required"));
+    }
+
+    @Test
+    void createProduct_blankDescription_returns400() throws Exception {
+        String body = """
+                {
+                  "name": "Product With Blank Description",
+                  "description": "   ",
+                  "price": 1000,
+                  "categoryId": 1,
+                  "imageUrl": "https://example.com/image.jpg"
+                }
+                """;
+
+        mockMvc.perform(post("/products")
+                        .cookie(adminCookie())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Description is required"));
+    }
+
+    @Test
     void createProduct_withoutOptionalFields_returns201() throws Exception {
         String body = """
                 {
                   "name": "Product Without Discount",
+                  "description": "Description",
                   "price": 1000,
                   "categoryId": 1,
                   "imageUrl": "https://example.com/image.jpg"
@@ -514,6 +555,7 @@ class ProductControllerIntegrationTest extends BaseIntegrationTest {
         String body = """
                 {
                   "name": "",
+                  "description": "Description",
                   "price": 1000,
                   "categoryId": 1,
                   "imageUrl": "https://example.com/image.jpg"
@@ -533,6 +575,7 @@ class ProductControllerIntegrationTest extends BaseIntegrationTest {
         String body = """
                 {
                   "name": "Product",
+                  "description": "Description",
                   "price": null,
                   "categoryId": 1,
                   "imageUrl": "https://example.com/image.jpg"
@@ -552,6 +595,7 @@ class ProductControllerIntegrationTest extends BaseIntegrationTest {
         String body = """
                 {
                   "name": "Product",
+                  "description": "Description",
                   "price": 1000,
                   "categoryId": null,
                   "imageUrl": "https://example.com/image.jpg"
@@ -571,6 +615,7 @@ class ProductControllerIntegrationTest extends BaseIntegrationTest {
         String body = """
                 {
                   "name": "Product",
+                  "description": "Description",
                   "price": 1000,
                   "categoryId": 1,
                   "imageUrl": ""
@@ -728,6 +773,7 @@ class ProductControllerIntegrationTest extends BaseIntegrationTest {
         String body = """
                 {
                   "name": "Updated Without Optional Fields",
+                  "description": "Description",
                   "price": 1000.00,
                   "categoryId": 1,
                   "imageUrl": "https://example.com/image.jpg"
@@ -745,7 +791,7 @@ class ProductControllerIntegrationTest extends BaseIntegrationTest {
                 .andExpect(jsonPath("$.data.categoryId").value(1))
                 .andExpect(jsonPath("$.data.imageUrl")
                         .value("https://example.com/image.jpg"))
-                .andExpect(jsonPath("$.data.description").doesNotExist())
+                .andExpect(jsonPath("$.data.description").value("Description"))
                 .andExpect(jsonPath("$.data.discountPrice").doesNotExist());
     }
 
