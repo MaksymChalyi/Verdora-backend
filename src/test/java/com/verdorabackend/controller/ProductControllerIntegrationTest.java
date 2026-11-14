@@ -791,7 +791,7 @@ class ProductControllerIntegrationTest extends BaseIntegrationTest {
                 .andExpect(jsonPath("$.data.categoryId").value(1))
                 .andExpect(jsonPath("$.data.imageUrl")
                         .value("https://example.com/image.jpg"))
-                .andExpect(jsonPath("$.data.description").doesNotExist())
+                .andExpect(jsonPath("$.data.description").value("Description"))
                 .andExpect(jsonPath("$.data.discountPrice").doesNotExist());
     }
 
