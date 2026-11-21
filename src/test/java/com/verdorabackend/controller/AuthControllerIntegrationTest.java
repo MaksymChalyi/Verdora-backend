@@ -2,6 +2,8 @@ package com.verdorabackend.controller;
 
 import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
@@ -135,6 +137,52 @@ class AuthControllerIntegrationTest extends BaseIntegrationTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.status").value(400))
                 .andExpect(jsonPath("$.message").isNotEmpty());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "12345",
+            "380989703417",
+            "+0989703417",
+            "+38098abc3417",
+            "+380 98 970 34 17",
+            "+1234567890123456"
+    })
+    void register_invalidPhone_returns400(String phone) throws Exception {
+        String body = """
+                {
+                  "name": "Stepan",
+                  "email": "invalid-phone@gmail.com",
+                  "phone": "%s",
+                  "password": "StrongPass1!"
+                }
+                """.formatted(phone);
+
+        mockMvc.perform(post("/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(cookie().doesNotExist("accessToken"))
+                .andExpect(cookie().doesNotExist("refreshToken"));
+    }
+
+    @Test
+    void register_validPhone_returns201() throws Exception {
+        String body = """
+                {
+                  "name": "Stepan",
+                  "email": "valid-phone@gmail.com",
+                  "phone": "+380989703417",
+                  "password": "StrongPass1!"
+                }
+                """;
+
+        mockMvc.perform(post("/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isCreated())
+                .andExpect(cookie().exists("accessToken"));
     }
 
 }

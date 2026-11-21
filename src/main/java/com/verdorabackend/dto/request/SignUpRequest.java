@@ -21,6 +21,10 @@ public record SignUpRequest(
 
         @Schema(description = "phone", example = "+380989703417", requiredMode = Schema.RequiredMode.REQUIRED)
         @NotBlank(message = "Phone is required")
+        @Pattern(
+                regexp = "^\\+[1-9]\\d{7,14}$",
+                message = "Invalid phone number format"
+        )
         String phone,
 
         @Schema(description = "password", example = "StrongPass1!")
