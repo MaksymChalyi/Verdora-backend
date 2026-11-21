@@ -15,6 +15,8 @@ import java.time.ZoneOffset;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.hamcrest.Matchers.containsString;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -417,6 +419,19 @@ class OrderControllerIntegrationTest extends BaseIntegrationTest {
     }
 
     // ── PATCH /orders/{id}/status ─────────────────────────────────────────────
+
+    @Test
+    void updateOrderStatus_corsPreflight_returns200AndAllowsPatch() throws Exception {
+        mockMvc.perform(options("/orders/{orderId}/status", 1)
+                        .header("Origin", "http://localhost:5173")
+                        .header("Access-Control-Request-Method", "PATCH")
+                        .header("Access-Control-Request-Headers", "content-type"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Access-Control-Allow-Origin", "http://localhost:5173"))
+                .andExpect(header().string("Access-Control-Allow-Credentials", "true"))
+                .andExpect(header().string("Access-Control-Allow-Methods",
+                        containsString("PATCH")));
+    }
 
     @Test
     void updateOrderStatus_pendingToPaid_returns200() throws Exception {
