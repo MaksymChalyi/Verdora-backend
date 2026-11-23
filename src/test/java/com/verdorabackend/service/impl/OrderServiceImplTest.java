@@ -1,6 +1,8 @@
 package com.verdorabackend.service.impl;
 
+import com.verdorabackend.dto.request.CheckoutRequest;
 import com.verdorabackend.dto.request.UpdateOrderStatusRequest;
+import com.verdorabackend.dto.response.CheckoutSummaryResponse;
 import com.verdorabackend.dto.response.AdminOrderDetailsResponse;
 import com.verdorabackend.dto.response.AdminOrderResponse;
 import com.verdorabackend.dto.response.OrderResponse;
@@ -47,6 +49,9 @@ class OrderServiceImplTest {
 
     @Mock
     private OrderMapper orderMapper;
+
+    private static final CheckoutRequest COURIER =
+            new CheckoutRequest(DeliveryMethod.COURIER_DELIVERY, "Kyiv, Main St 1", null);
 
     @InjectMocks
     private OrderServiceImpl orderService;
@@ -98,7 +103,7 @@ class OrderServiceImplTest {
         when(orderRepository.save(any())).thenReturn(order);
         when(cartRepository.save(any())).thenReturn(cart);
 
-        orderService.placeOrder(1L);
+        orderService.placeOrder(1L, COURIER);
 
         verify(orderRepository).save(any(Order.class));
         verify(cartRepository).save(cart);
@@ -110,7 +115,7 @@ class OrderServiceImplTest {
         cart.getItems().clear();
         when(cartRepository.findByUser_Id(1L)).thenReturn(Optional.of(cart));
 
-        assertThatThrownBy(() -> orderService.placeOrder(1L))
+        assertThatThrownBy(() -> orderService.placeOrder(1L, COURIER))
                 .isInstanceOf(CartIsEmptyException.class);
     }
 
@@ -118,7 +123,7 @@ class OrderServiceImplTest {
     void placeOrder_noCart_throwsException() {
         when(cartRepository.findByUser_Id(1L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> orderService.placeOrder(1L))
+        assertThatThrownBy(() -> orderService.placeOrder(1L, COURIER))
                 .isInstanceOf(CartIsEmptyException.class);
     }
 
@@ -135,7 +140,53 @@ class OrderServiceImplTest {
         });
         when(cartRepository.save(any())).thenReturn(cart);
 
-        orderService.placeOrder(1L);
+        orderService.placeOrder(1L, COURIER);
+    }
+
+    @Test
+    void placeOrder_courierBelowThreshold_addsShippingCost() {
+        // 2 × 999 = 1998 < 2000 → +150
+        product.setPrice(BigDecimal.valueOf(999));
+        when(cartRepository.findByUser_Id(1L)).thenReturn(Optional.of(cart));
+        when(orderRepository.save(any())).thenReturn(order);
+
+        orderService.placeOrder(1L, COURIER);
+
+        org.mockito.ArgumentCaptor<Order> captor = org.mockito.ArgumentCaptor.forClass(Order.class);
+        verify(orderRepository).save(captor.capture());
+        Order saved = captor.getValue();
+        assertThat(saved.getShippingCost()).isEqualByComparingTo("150");
+        assertThat(saved.getTotalPrice()).isEqualByComparingTo("2148");
+        assertThat(saved.getDeliveryMethod()).isEqualTo(DeliveryMethod.COURIER_DELIVERY);
+        assertThat(saved.getDeliveryAddress()).isEqualTo("Kyiv, Main St 1");
+    }
+
+    @Test
+    void placeOrder_courierWithoutAddress_throwsException() {
+        CheckoutRequest request = new CheckoutRequest(DeliveryMethod.COURIER_DELIVERY, " ", null);
+
+        assertThatThrownBy(() -> orderService.placeOrder(1L, request))
+                .isInstanceOf(com.verdorabackend.exception.InvalidDeliveryDetailsException.class);
+    }
+
+    @Test
+    void placeOrder_pickupWithoutPickupPoint_throwsException() {
+        CheckoutRequest request = new CheckoutRequest(DeliveryMethod.STORE_PICKUP, null, null);
+
+        assertThatThrownBy(() -> orderService.placeOrder(1L, request))
+                .isInstanceOf(com.verdorabackend.exception.InvalidDeliveryDetailsException.class);
+    }
+
+    @Test
+    void getCheckoutSummary_pickup_freeShipping() {
+        when(cartRepository.findByUser_Id(1L)).thenReturn(Optional.of(cart));
+
+        CheckoutSummaryResponse result = orderService.getCheckoutSummary(1L,
+                new CheckoutRequest(DeliveryMethod.STORE_PICKUP, null, 1L));
+
+        assertThat(result.itemsTotal()).isEqualByComparingTo("2000");
+        assertThat(result.shippingCost()).isEqualByComparingTo("0");
+        assertThat(result.totalPrice()).isEqualByComparingTo("2000");
     }
 
     // ── getOrders ────────────────────────────────────────────────────────────

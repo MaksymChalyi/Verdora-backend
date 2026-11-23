@@ -33,6 +33,19 @@ public class Order {
     @Column(name = "total_price", nullable = false, precision = 10, scale = 2)
     private BigDecimal totalPrice;
 
+    @Column(name = "shipping_cost", nullable = false, precision = 10, scale = 2)
+    private BigDecimal shippingCost = BigDecimal.ZERO;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "delivery_method", length = 32)
+    private DeliveryMethod deliveryMethod;
+
+    @Column(name = "delivery_address", length = 512)
+    private String deliveryAddress;
+
+    @Column(name = "pickup_point_id")
+    private Long pickupPointId;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 32)
     private OrderStatus status;

@@ -1,5 +1,6 @@
 package com.verdorabackend.controller;
 
+import com.verdorabackend.dto.request.CheckoutRequest;
 import com.verdorabackend.dto.request.UpdateOrderStatusRequest;
 import com.verdorabackend.dto.response.*;
 import com.verdorabackend.entity.OrderStatus;
@@ -36,16 +37,47 @@ public class OrderController {
 
     private final OrderService orderService;
 
-    @Operation(summary = "Place order", description = "Creates an order from current cart and clears the cart")
+    @Operation(
+            summary = "Calculate checkout summary",
+            description = "Returns items total, shipping cost and total price for the current cart and selected "
+                    + "delivery method without placing the order"
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Checkout summary calculated"),
+            @ApiResponse(responseCode = "400", description = "Cart is empty or delivery details are invalid"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "404", description = "Pickup point not found")
+    })
+    @PostMapping("/checkout-summary")
+    public ResponseEntity<BaseResponse<CheckoutSummaryResponse>> getCheckoutSummary(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @RequestBody @Valid CheckoutRequest request) {
+        log.info("Request to calculate checkout summary for userId={}, deliveryMethod={}",
+                principal.getUser().getId(), request.deliveryMethod());
+        CheckoutSummaryResponse response = orderService.getCheckoutSummary(principal.getUser().getId(), request);
+        return ResponseEntity.ok(
+                BaseResponseFactory.success(HttpStatus.OK, "Checkout summary calculated", response)
+        );
+    }
+
+    @Operation(
+            summary = "Place order",
+            description = "Creates an order from current cart with the selected delivery method, "
+                    + "stores items total, shipping cost and total price, and clears the cart"
+    )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Order placed"),
-            @ApiResponse(responseCode = "400", description = "Cart is empty")
+            @ApiResponse(responseCode = "400", description = "Cart is empty or delivery details are invalid"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "404", description = "Pickup point not found")
     })
     @PostMapping
     public ResponseEntity<BaseResponse<OrderResponse>> placeOrder(
-            @AuthenticationPrincipal UserPrincipal principal) {
-        log.info("Request to place order for userId={}", principal.getUser().getId());
-        OrderResponse response = orderService.placeOrder(principal.getUser().getId());
+            @AuthenticationPrincipal UserPrincipal principal,
+            @RequestBody @Valid CheckoutRequest request) {
+        log.info("Request to place order for userId={}, deliveryMethod={}",
+                principal.getUser().getId(), request.deliveryMethod());
+        OrderResponse response = orderService.placeOrder(principal.getUser().getId(), request);
         return ResponseEntity.status(HttpStatus.CREATED).body(
                 BaseResponseFactory.success(HttpStatus.CREATED, "Order placed successfully", response)
         );

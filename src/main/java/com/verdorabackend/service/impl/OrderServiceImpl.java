@@ -1,12 +1,15 @@
 package com.verdorabackend.service.impl;
 
+import com.verdorabackend.dto.request.CheckoutRequest;
 import com.verdorabackend.dto.request.UpdateOrderStatusRequest;
 import com.verdorabackend.dto.response.*;
 import com.verdorabackend.entity.Cart;
+import com.verdorabackend.entity.DeliveryMethod;
 import com.verdorabackend.entity.Order;
 import com.verdorabackend.entity.OrderItem;
 import com.verdorabackend.entity.OrderStatus;
 import com.verdorabackend.exception.CartIsEmptyException;
+import com.verdorabackend.exception.InvalidDeliveryDetailsException;
 import com.verdorabackend.exception.InvalidOrderStatusTransitionException;
 import com.verdorabackend.exception.OrderCannotBeCancelledException;
 import com.verdorabackend.exception.OrderNotFoundException;
@@ -36,10 +39,32 @@ public class OrderServiceImpl implements OrderService {
     private final CartRepository cartRepository;
     private final OrderMapper orderMapper;
 
+    // Тарифи доставки: самовивіз безкоштовний, кур'єр — 150, безкоштовно від 2000
+    static final BigDecimal COURIER_COST = new BigDecimal("150.00");
+    static final BigDecimal FREE_COURIER_THRESHOLD = new BigDecimal("2000.00");
+
+    @Override
+    @Transactional(readOnly = true)
+    public CheckoutSummaryResponse getCheckoutSummary(Long userId, CheckoutRequest request) {
+        validateDelivery(request);
+        Cart cart = cartRepository.findByUser_Id(userId)
+                .filter(c -> !c.getItems().isEmpty())
+                .orElseThrow(CartIsEmptyException::new);
+
+        BigDecimal itemsTotal = cart.getItems().stream()
+                .map(item -> item.getProduct().getEffectivePrice()
+                        .multiply(BigDecimal.valueOf(item.getQuantity())))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal shippingCost = calculateShippingCost(request.deliveryMethod(), itemsTotal);
+
+        return new CheckoutSummaryResponse(itemsTotal, shippingCost, itemsTotal.add(shippingCost));
+    }
+
     @Override
     @Transactional
-    public OrderResponse placeOrder(Long userId) {
-        log.debug("Placing order for userId={}", userId);
+    public OrderResponse placeOrder(Long userId, CheckoutRequest request) {
+        log.debug("Placing order for userId={}, deliveryMethod={}", userId, request.deliveryMethod());
+        validateDelivery(request);
 
         Cart cart = cartRepository.findByUser_Id(userId)
                 .orElseThrow(CartIsEmptyException::new);
@@ -51,6 +76,12 @@ public class OrderServiceImpl implements OrderService {
         Order order = new Order();
         order.setUser(cart.getUser());
         order.setStatus(OrderStatus.PENDING);
+        order.setDeliveryMethod(request.deliveryMethod());
+        if (request.deliveryMethod() == DeliveryMethod.COURIER_DELIVERY) {
+            order.setDeliveryAddress(request.deliveryAddress().strip());
+        } else {
+            order.setPickupPointId(request.pickupPointId());
+        }
 
         List<OrderItem> orderItems = cart.getItems().stream().map(cartItem -> {
             OrderItem orderItem = new OrderItem();
@@ -63,11 +94,14 @@ public class OrderServiceImpl implements OrderService {
 
         order.setItems(orderItems);
 
-        BigDecimal totalPrice = orderItems.stream()
+        BigDecimal itemsTotal = orderItems.stream()
                 .map(item -> item.getPriceAtPurchase()
                         .multiply(BigDecimal.valueOf(item.getQuantity())))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal shippingCost = calculateShippingCost(request.deliveryMethod(), itemsTotal);
+        BigDecimal totalPrice = itemsTotal.add(shippingCost);
 
+        order.setShippingCost(shippingCost);
         order.setTotalPrice(totalPrice);
 
         Order saved = orderRepository.save(order);
@@ -177,6 +211,23 @@ public class OrderServiceImpl implements OrderService {
         return new OrderStatusResponse(orderId, status, status.isFinal());
     }
 
+    private void validateDelivery(CheckoutRequest request) {
+        if (request.deliveryMethod() == DeliveryMethod.COURIER_DELIVERY
+                && (request.deliveryAddress() == null || request.deliveryAddress().isBlank())) {
+            throw new InvalidDeliveryDetailsException("Delivery address is required for COURIER_DELIVERY");
+        }
+        if (request.deliveryMethod() == DeliveryMethod.STORE_PICKUP && request.pickupPointId() == null) {
+            throw new InvalidDeliveryDetailsException("Pickup point ID is required for STORE_PICKUP");
+        }
+    }
+
+    private BigDecimal calculateShippingCost(DeliveryMethod method, BigDecimal itemsTotal) {
+        if (method == DeliveryMethod.STORE_PICKUP || itemsTotal.compareTo(FREE_COURIER_THRESHOLD) >= 0) {
+            return BigDecimal.ZERO;
+        }
+        return COURIER_COST;
+    }
+
     private AdminOrderDetailsResponse buildAdminOrderDetailsResponse(Order order) {
         OrderResponse orderResponse = buildOrderResponse(order);
         AdminOrderResponse adminOrderResponse = buildAdminOrderResponse(order);
@@ -232,7 +283,12 @@ public class OrderServiceImpl implements OrderService {
                 order.getCreatedAt(),
                 order.getTotalPrice(),
                 order.getStatus(),
-                itemResponses
+                itemResponses,
+                order.getTotalPrice().subtract(order.getShippingCost()),
+                order.getShippingCost(),
+                order.getDeliveryMethod(),
+                order.getDeliveryAddress(),
+                order.getPickupPointId()
         );
     }
 }

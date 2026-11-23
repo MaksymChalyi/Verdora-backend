@@ -29,6 +29,40 @@ class OrderControllerIntegrationTest extends BaseIntegrationTest {
     @Autowired
     private UserRepository userRepository;
 
+    private static final String COURIER_BODY = """
+            {"deliveryMethod": "COURIER_DELIVERY", "deliveryAddress": "Kyiv, Khreshchatyk St, 22"}
+            """;
+
+    @Test
+    void checkoutSummary_storePickup_returnsFreeShippingWithoutPlacingOrder() throws Exception {
+        mockMvc.perform(post("/cart/items")
+                        .cookie(userCookie())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"productId\": 1, \"quantity\": 2}"))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/orders/checkout-summary")
+                        .cookie(userCookie())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"deliveryMethod\": \"STORE_PICKUP\", \"pickupPointId\": 1}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.itemsTotal").value(1600.00))
+                .andExpect(jsonPath("$.data.shippingCost").value(0))
+                .andExpect(jsonPath("$.data.totalPrice").value(1600.00));
+
+        mockMvc.perform(get("/cart").cookie(userCookie()))
+                .andExpect(jsonPath("$.data.items").isNotEmpty());
+    }
+
+    @Test
+    void placeOrder_missingDeliveryMethod_returns400() throws Exception {
+        mockMvc.perform(post("/orders")
+                        .cookie(userCookie())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isBadRequest());
+    }
+
     // ── POST /orders ──────────────────────────────────────────────────────────
 
     @Test
@@ -47,9 +81,14 @@ class OrderControllerIntegrationTest extends BaseIntegrationTest {
                 .andExpect(status().isOk());
 
         mockMvc.perform(post("/orders")
-                        .cookie(userCookie()))
+                        .cookie(userCookie())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(COURIER_BODY))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.data.totalPrice").value(1600.00))
+                .andExpect(jsonPath("$.data.itemsTotal").value(1600.00))
+                .andExpect(jsonPath("$.data.shippingCost").value(150.00))
+                .andExpect(jsonPath("$.data.totalPrice").value(1750.00))
+                .andExpect(jsonPath("$.data.deliveryMethod").value("COURIER_DELIVERY"))
                 .andExpect(jsonPath("$.data.items[0].priceAtPurchase").value(800.00))
                 .andExpect(jsonPath("$.data.items[0].subtotal").value(1600.00));
     }
@@ -59,7 +98,9 @@ class OrderControllerIntegrationTest extends BaseIntegrationTest {
         mockMvc.perform(delete("/cart").cookie(userCookie()));
 
         mockMvc.perform(post("/orders")
-                        .cookie(userCookie()))
+                        .cookie(userCookie())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(COURIER_BODY))
                 .andExpect(status().isBadRequest());
     }
 
@@ -213,7 +254,9 @@ class OrderControllerIntegrationTest extends BaseIntegrationTest {
                 .andExpect(status().isOk());
 
         String result = mockMvc.perform(post("/orders")
-                        .cookie(userCookie()))
+                        .cookie(userCookie())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(COURIER_BODY))
                 .andExpect(status().isCreated())
                 .andReturn()
                 .getResponse()
