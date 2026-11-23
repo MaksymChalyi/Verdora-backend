@@ -1,8 +1,10 @@
 package com.verdorabackend.service;
 
+import com.verdorabackend.dto.request.CheckoutRequest;
 import com.verdorabackend.dto.request.UpdateOrderStatusRequest;
 import com.verdorabackend.dto.response.AdminOrderDetailsResponse;
 import com.verdorabackend.dto.response.AdminOrderResponse;
+import com.verdorabackend.dto.response.CheckoutSummaryResponse;
 import com.verdorabackend.dto.response.OrderResponse;
 import com.verdorabackend.dto.response.OrderStatusResponse;
 import com.verdorabackend.entity.OrderStatus;
@@ -13,7 +15,9 @@ import java.time.LocalDate;
 
 public interface OrderService {
 
-    OrderResponse placeOrder(Long userId);
+    CheckoutSummaryResponse getCheckoutSummary(Long userId, CheckoutRequest request);
+
+    OrderResponse placeOrder(Long userId, CheckoutRequest request);
 
     Page<OrderResponse> getOrders(Long userId, Pageable pageable);
 

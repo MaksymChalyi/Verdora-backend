@@ -10,7 +10,7 @@ spring:
       ddl-auto: none
   flyway:
     enabled: true
-    target: '18'
+    target: '18.1'
     locations:
       - classpath:db/migration
       - classpath:db/testdata
