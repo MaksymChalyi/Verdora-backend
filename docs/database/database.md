@@ -29,7 +29,7 @@ erDiagram
 | `users` | `email` `UNIQUE`; `role` `CHECK IN ('USER','ADMIN')`; `phone_number` nullable |
 | `carts` | `user_id` `UNIQUE` — один кошик на користувача |
 | `cart_items` | `quantity > 0`; `UNIQUE (cart_id, product_id)` |
-| `orders` | `status` `CHECK IN ('PENDING','PAID','SHIPPED','DELIVERED','CANCELLED')` (V13 додав `DELIVERED`); `total_price` `DECIMAL(10,2)` |
+| `orders` | `status` `CHECK IN ('PENDING','PAID','SHIPPED','DELIVERED','CANCELLED')` (V13 додав `DELIVERED`); `total_price` `DECIMAL(10,2)` (товари + доставка); V27: `shipping_cost` `DECIMAL(10,2) NOT NULL DEFAULT 0`, nullable `delivery_method`, `delivery_address` (до 512), `pickup_point_id` (без FK — довідника точок немає) |
 | `order_items` | `quantity > 0`; `UNIQUE (order_id, product_id)`; `price_at_purchase` — знімок ціни |
 | `favorites` | складений PK `(user_id, product_id)` |
 | `password_reset_tokens` | `token` `UNIQUE`, `expires_at`, `used` |
@@ -56,6 +56,7 @@ erDiagram
 | V14–V17 | Оновлення пароля адміністратора (V16 — порожня міграція) |
 | V18 | Колонка `categories.image_url` |
 | V19–V24 | Showcase-дані магазину (див. нижче) |
+| V27 | Доставка в `orders`: `delivery_method`, `delivery_address`, `pickup_point_id`, `shipping_cost` (див. [orders.md](../order/orders.md#доставка)) |
 
 > Пароль адміністратора в документації навмисно не наводиться. Актуальні облікові дані слід отримувати у відповідальних за середовище, а в продакшені — змінити пароль після першого входу.
 
@@ -93,9 +94,11 @@ erDiagram
 |---|---|---|
 | БД | PostgreSQL | H2 in-memory (`MODE=PostgreSQL`) |
 | Локації Flyway | `db/migration` | `db/migration` + `db/testdata` |
-| Версії | усі (V1–V24) | лише до **V18** (`spring.flyway.target: '18'`) |
+| Версії | усі | лише до **V18.1** (`spring.flyway.target: '18.1'`) |
 | Seed-дані | V19–V24 (showcase) | `V11__insert_test_users.sql`, `V12__insert_test_data.sql` |
 
 Тобто showcase-міграції V19–V24 у тестах **не застосовуються**, а тестові V11/V12 **ніколи не потрапляють** у продакшн (вони лежать у `src/test/resources/db/testdata`). Звідси «пропуск» V11/V12 в основному наборі міграцій.
+
+> **Схемні міграції після V18** у тести через `target` не потрапляють, тому для них кладеться копія в `db/testdata` з версією `18.x`. Зараз так зроблено для `V27__add_delivery_to_orders.sql` → `db/testdata/V18_1__add_delivery_to_orders.sql`. Змінюючи таку міграцію, оновлюйте обидва файли; для наступної — створіть `V18_2__...` і підніміть `target`.
 
 > `VerdoraBackendApplicationTests` (`@SpringBootTest` без профілю `test`) піднімає повний контекст на реальному datasource з env-змінних — у CI для цього запускається сервіс PostgreSQL (див. [CI](../ci-cd/github-ci.md)).

@@ -24,7 +24,8 @@ Backend повертає технічні enum-значення, а user-facing 
 
 | Метод | URL | Роль | Опис |
 |---|---|---|---|
-| POST | `/orders` | USER | Оформити замовлення з кошика |
+| POST | `/orders/checkout-summary` | USER | Розрахувати суму товарів, доставку й загальну суму (без оформлення) |
+| POST | `/orders` | USER | Оформити замовлення з кошика з обраним способом доставки |
 | GET | `/orders` | USER | Сторінка власних замовлень |
 | GET | `/orders/{orderId}` | USER | Деталі свого замовлення |
 | GET | `/orders/{orderId}/status` | USER | Легкий опитувальний (polling) статус свого замовлення |
@@ -39,9 +40,66 @@ Backend повертає технічні enum-значення, а user-facing 
 
 ---
 
+## Доставка
+
+| `deliveryMethod` | Обов'язкове поле | Вартість |
+|---|---|---|
+| `COURIER_DELIVERY` | `deliveryAddress` (не порожній, до 512 символів) | `150.00`; **безкоштовно**, якщо сума товарів ≥ `2000.00` |
+| `STORE_PICKUP` | `pickupPointId` (додатне число) | `0` |
+
+Тарифи — константи `COURIER_COST` і `FREE_COURIER_THRESHOLD` в `OrderServiceImpl`.
+
+Обидва ендпоінти (`POST /orders/checkout-summary` і `POST /orders`) приймають однакове тіло `CheckoutRequest`:
+```json
+{ "deliveryMethod": "COURIER_DELIVERY", "deliveryAddress": "Kyiv, Khreshchatyk St, 22" }
+```
+```json
+{ "deliveryMethod": "STORE_PICKUP", "pickupPointId": 1 }
+```
+Зайве поле для обраного способу ігнорується (для кур'єра не зберігається `pickupPointId`, для самовивозу — адреса).
+
+> Довідника точок самовивозу на бекенді немає: список точок живе на FE, `pickupPointId` лише зберігається в замовленні й не перевіряється на існування.
+
+**Помилки валідації (400):**
+
+| Випадок | `message` |
+|---|---|
+| Тіло відсутнє / невалідний JSON / невідоме значення enum | стандартна помилка `400` |
+| Немає `deliveryMethod` | `Delivery method is required` (у списку помилок валідації) |
+| `COURIER_DELIVERY` без адреси або з порожньою | `Delivery address is required for COURIER_DELIVERY` |
+| `STORE_PICKUP` без `pickupPointId` | `Pickup point ID is required for STORE_PICKUP` |
+
+---
+
+## POST /orders/checkout-summary
+
+Рахує суму для поточного кошика й обраного способу доставки **до підтвердження** замовлення. Нічого не створює, кошик не змінюється — можна викликати при кожній зміні способу доставки на `/checkout`.
+
+**Request body:** `CheckoutRequest` (див. [Доставка](#доставка)).
+
+**Response 200:**
+```json
+{
+  "timestamp": "2026-05-23T12:00:00Z",
+  "status": 200,
+  "message": "Checkout summary calculated",
+  "data": {
+    "itemsTotal": 1600.00,
+    "shippingCost": 150.00,
+    "totalPrice": 1750.00
+  }
+}
+```
+
+**Response 400** — кошик порожній або невалідні дані доставки.
+
+---
+
 ## POST /orders
 
-Оформлює замовлення з поточного кошика. Кошик очищається після успішного створення.
+Оформлює замовлення з поточного кошика з обраним способом доставки. Вартість доставки рахується на бекенді (як у `checkout-summary`) і зберігається в замовленні. Кошик очищається після успішного створення; при помилці валідації кошик не змінюється.
+
+**Request body (обов'язково):** `CheckoutRequest` (див. [Доставка](#доставка)).
 
 **Response 201:**
 ```json
@@ -54,6 +112,11 @@ Backend повертає технічні enum-значення, а user-facing 
     "createdAt": "2026-05-23T12:00:00Z",
     "totalPrice": 45498.99,
     "status": "PENDING",
+    "itemsTotal": 45498.99,
+    "shippingCost": 0.00,
+    "deliveryMethod": "COURIER_DELIVERY",
+    "deliveryAddress": "Kyiv, Khreshchatyk St, 22",
+    "pickupPointId": null,
     "items": [
       {
         "orderItemId": 1,
@@ -87,6 +150,7 @@ Backend повертає технічні enum-значення, а user-facing 
   "message": "Cannot place order: cart is empty"
 }
 ```
+Також `400` — невалідні дані доставки (див. [Доставка](#доставка)).
 
 ---
 
@@ -273,9 +337,23 @@ Backend повертає технічні enum-значення, а user-facing 
 |---|---|---|
 | `orderId` | Long | ID замовлення |
 | `createdAt` | OffsetDateTime | Дата створення |
-| `totalPrice` | BigDecimal | Загальна сума |
+| `totalPrice` | BigDecimal | Загальна сума: `itemsTotal + shippingCost` |
 | `status` | OrderStatus | Статус |
 | `items` | List\<OrderItemResponse\> | Список товарів |
+| `itemsTotal` | BigDecimal | Сума товарів без доставки (`totalPrice − shippingCost`) |
+| `shippingCost` | BigDecimal | Вартість доставки, зафіксована при оформленні |
+| `deliveryMethod` | DeliveryMethod | `COURIER_DELIVERY` / `STORE_PICKUP`; `null` для старих замовлень |
+| `deliveryAddress` | String | Адреса доставки (лише `COURIER_DELIVERY`) |
+| `pickupPointId` | Long | ID точки самовивозу (лише `STORE_PICKUP`) |
+
+> Адмінські `AdminOrderResponse` / `AdminOrderDetailsResponse` полів доставки поки не містять.
+
+### CheckoutSummaryResponse (`POST /orders/checkout-summary`)
+| Поле | Тип | Опис |
+|---|---|---|
+| `itemsTotal` | BigDecimal | Сума товарів кошика за `effectivePrice` |
+| `shippingCost` | BigDecimal | Вартість доставки |
+| `totalPrice` | BigDecimal | `itemsTotal + shippingCost` |
 
 ### OrderItemResponse
 | Поле | Тип | Опис |
@@ -313,7 +391,8 @@ Backend повертає технічні enum-значення, а user-facing 
 ## Бізнес-логіка
 
 - `priceAtPurchase` фіксується на момент оформлення як **ефективна ціна товару** (`Product#getEffectivePrice()`) — тобто `discountPrice`, якщо вона менша за `price`, інакше звичайна `price`. Якщо ціна товару зміниться пізніше — це не вплине на вже оформлене замовлення. Знімком є лише ціна: назва, зображення й категорія в `OrderItemResponse` завжди поточні.
-- `totalPrice` = сума `priceAtPurchase × quantity` по всіх позиціях.
+- `totalPrice` = сума `priceAtPurchase × quantity` по всіх позиціях **+ `shippingCost`**. Вартість доставки рахується на бекенді (FE не передає суму) і фіксується в `orders.shipping_cost`.
+- Замовлення, створені до появи доставки, мають `delivery_method = NULL` і `shipping_cost = 0`.
 - Оплати немає: замовлення створюється в `PENDING`, у `PAID` його переводить адмін через `PATCH`. Складський облік (списання залишків) не реалізований.
 - Після `POST /orders` кошик **очищається автоматично**, і сам `Cart` не видаляється — лише його елементи.
 - Юзер бачить **тільки свої** замовлення через `GET /orders`, `/orders/{orderId}`, `/orders/{orderId}/status` — чужий `orderId` повертає 404. Повний огляд усіх замовлень доступний лише ADMIN через `/orders/all` і `/orders/{orderId}/details`.
@@ -328,11 +407,17 @@ Backend повертає технічні enum-значення, а user-facing 
 
 ```mermaid
 flowchart TD
+    A --> CS[POST /orders/checkout-summary]
+    CS --> CS2([200 itemsTotal + shippingCost + totalPrice])
+
     A([Користувач]) --> B[POST /orders]
-    B --> C{Кошик порожній?}
+    B --> B1{Дані доставки валідні?}
+    B1 -- Ні --> B2([400 Invalid delivery])
+    B1 -- Так --> C{Кошик порожній?}
     C -- Так --> D([400 Cart is empty])
     C -- Ні --> E[Зафіксувати priceAtPurchase = effectivePrice]
-    E --> F[Створити Order + OrderItems]
+    E --> E1[Розрахувати shippingCost]
+    E1 --> F[Створити Order + OrderItems]
     F --> G[Очистити кошик]
     G --> H([201 Created PENDING])
 
@@ -383,6 +468,10 @@ erDiagram
         bigint order_id PK
         int user_id FK
         decimal total_price
+        decimal shipping_cost
+        varchar delivery_method
+        varchar delivery_address
+        bigint pickup_point_id
         varchar status
         timestamp created_at
     }
